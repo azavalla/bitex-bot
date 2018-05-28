@@ -98,18 +98,17 @@ class ApiWrapper
       return order unless order.nil? || order.id.nil?
 
       BitexBot::Robot.log(:debug, "Captured error when placing order on #{self.class.name}")
-      # Order may have gone through and be stuck somewhere in Wrapper's piipeline.
+      # Order may have gone through and be stuck somewhere in Wrapper's pipeline.
       # We just sleep for a bit and then look for the order.
       20.times do
         BitexBot::Robot.sleep_for(10)
         order = find_lost(type, price, quantity)
         return order if order.present?
       end
-
       raise OrderNotFound, "Closing: #{type} order not found for #{quantity} BTC @ $#{price}. #{order}"
     end
 
-    # Hook Method - thearguments could not be used in their entirety by the subclasses
+    # Hook Method - arguments could not be used in their entirety by the subclasses
     def send_order(_type, _price, _quantity)
       raise 'self subclass responsibility'
     end
@@ -117,13 +116,14 @@ class ApiWrapper
     # @param order_method [String] buy|sell
     # @param price [Decimal]
     #
-    # Hook Method - the arguments could not be used in their entirety by the subclasses
+    # Hook Method - arguments could not be used in their entirety by the subclasses
     def find_lost(_type, _price, _quantity)
       raise 'self subclass responsibility'
     end
 
     # @param order_id
     # @param transactions
+    #
     # @return [Array<Decimal, Decimal>]
     def amount_and_quantity(_order_id, _transactions)
       raise 'self subclass responsibility'

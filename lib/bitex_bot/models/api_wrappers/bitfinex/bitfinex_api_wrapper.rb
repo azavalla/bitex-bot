@@ -19,7 +19,10 @@ class BitfinexApiWrapper < ApiWrapper
   def self.amount_and_quantity(order_id, _transactions)
     with_retry("find order #{order_id}") do
       order = Bitfinex::Client.new.order_status(order_id)
-      [order['avg_execution_price'].to_d * order['executed_amount'].to_d, order['executed_amount'].to_d]
+      amount = order['avg_execution_price'].to_d * order['executed_amount'].to_d
+      quantity = order['executed_amount'].to_d
+
+      [amount, quantity]
     end
   end
 
@@ -67,12 +70,10 @@ class BitfinexApiWrapper < ApiWrapper
   rescue StandardError, Bitfinex::ClientError
     BitexBot::Robot.log(:info, "Bitfinex #{action} failed. Retrying in 5 seconds.")
     BitexBot::Robot.sleep_for 5
-    if retries < max_retries
-      with_retry(action, retries + 1, &block)
-    else
-      BitexBot::Robot.log(:info, "Bitfinex #{action} failed. Gave up.")
-      raise
-    end
+    return with_retry(action, retries + 1, &block) if retries < max_retries
+
+    BitexBot::Robot.log(:info, "Bitfinex #{action} failed. Gave up.")
+    raise
   end
 
   # [

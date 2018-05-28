@@ -1,5 +1,5 @@
 # Wrapper implementation for Bitstamp API.
-#
+# https://www.bitstamp.net/api/
 class BitstampApiWrapper < ApiWrapper
   def self.setup
     Bitstamp.setup do |config|
@@ -26,23 +26,20 @@ class BitstampApiWrapper < ApiWrapper
   end
 
   def self.find_lost(type, price)
-    orders.find do |o|
-      o.order_method == type &&
-        o.price == price &&
-        o.datetime.to_datetime >= 5.minutes.ago.to_datetime
-    end
+    orders.find { |o| o.order_method == type && o.price == price && o.datetime.to_datetime >= 5.minutes.ago.to_datetime }
   end
 
   # rubocop:disable Metrics/AbcSize
   def self.order_book(retries = 20)
     book = Bitstamp.order_book.deep_symbolize_keys
     age = Time.now.to_i - book[:timestamp].to_i
-
     return order_book_parser(book) if age <= 300
-    BitexBot::Robot.log(:info, "Refusing to continue as order book is #{age} seconds old")
+
+    BitexBot::Robot.log(:info, "Refusing to continue as orderbook is #{age} seconds old")
     order_book(retries)
   rescue StandardError
     raise if retries.zero?
+
     BitexBot::Robot.log(:info, "Bitstamp order book failed, retrying #{retries} more times")
     BitexBot::Robot.sleep_for 1
     order_book(retries - 1)
