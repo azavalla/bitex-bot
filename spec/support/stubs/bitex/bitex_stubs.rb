@@ -11,8 +11,8 @@ module BitexStubs
 
     Bitex::Ask.stub(:find) { |id| BitexStubs.asks[id] }
 
-    Bitex::Bid.stub(:create!) do |orderbook, to_spend, price|
-      orderbook.should eq BitexBot::Settings.bitex.orderbook
+    Bitex::Bid.stub(:create!) do |order_book, to_spend, price|
+      order_book.should eq BitexBot::Settings.bitex.order_book
 
       Bitex::Bid.new.tap do |bid|
         bid.id = 12_345
@@ -21,7 +21,7 @@ module BitexStubs
         bid.amount = to_spend
         bid.remaining_amount = to_spend
         bid.status = :executing
-        bid.orderbook = orderbook
+        bid.order_book = order_book
         bid.stub(:cancel!) do
           bid.status = :cancelled
           BitexStubs.active_bids.delete(bid.id)
@@ -32,8 +32,8 @@ module BitexStubs
       end
     end
 
-    Bitex::Ask.stub(:create!) do |orderbook, to_sell, price|
-      orderbook.should eq BitexBot::Settings.bitex.orderbook
+    Bitex::Ask.stub(:create!) do |order_book, to_sell, price|
+      order_book.should eq BitexBot::Settings.bitex.order_book
 
       Bitex::Ask.new.tap do |ask|
         ask.id = 12_345
@@ -42,7 +42,7 @@ module BitexStubs
         ask.quantity = to_sell
         ask.remaining_quantity = to_sell
         ask.status = :executing
-        ask.orderbook = orderbook
+        ask.order_book = order_book
         ask.stub(:cancel!) do
           ask.status = :cancelled
           BitexStubs.active_asks.delete(ask.id)

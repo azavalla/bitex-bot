@@ -1,7 +1,5 @@
 module BitexBot
-  ##
   # Close buy/sell positions.
-  #
   class ClosingFlow < ActiveRecord::Base
     self.abstract_class = true
 
@@ -17,7 +15,7 @@ module BitexBot
       price = suggested_amount(open_positions) / quantity
 
       # Don't even bother trying to close a position that's too small.
-      return unless BitexBot::Robot.taker.enough_order_size?(quantity, price)
+      return unless Robot.taker.enough_order_size?(quantity, price)
       create_closing_flow!(price, quantity, amount, open_positions)
     end
 
@@ -41,6 +39,18 @@ module BitexBot
     def sync_closed_positions(orders, transactions)
       # Maybe we couldn't create the bitstamp order when this flow was created, so we try again when syncing.
       latest_close.nil? ? create_initial_order_and_close_position! : create_or_cancel!(orders, transactions)
+    end
+
+    def estimate_fiat_profit
+      estimate_amount_positions_balance / fx_rate
+    end
+
+    def amount_positions_balance
+      raise 'self subclass responsibility'
+    end
+
+    def fx_rate
+      Store.first.try(:fx_rate) || Settings.fx_rate
     end
 
     private
@@ -76,21 +86,21 @@ module BitexBot
         order.cancel!
         Robot.log(:debug, "Finalised #{order.class}##{order.id}")
       end
-    rescue StandardError
+    rescue StandardError => error
+      Robot.log(:debug, error)
       nil # just pass, we'll keep on trying until it's not in orders anymore.
     end
 
     # This use hooks methods, these must be defined in the subclass:
     #   estimate_btc_profit
-    #   estimate_usd_profit
+    #   amount_positions_balance
     #   next_price_and_quantity
     def create_next_position!
       next_price, next_quantity = next_price_and_quantity
       return create_order_and_close_position(next_quantity, next_price) if enough_order_size?(next_quantity, next_price)
 
-      update!(btc_profit: estimate_btc_profit, usd_profit: estimate_usd_profit, done: true)
-      Robot.log(:info, "Closing: Finished #{self.class.name} ##{id} earned $#{usd_profit} and #{btc_profit} BTC.")
-      save!
+      update!(btc_profit: estimate_btc_profit, fiat_profit: estimate_fiat_profit, done: true)
+      Robot.log(:info, "Closing: Finished #{self.class.name} ##{id} earned $#{fiat_profit} and #{btc_profit} BTC.")
     end
 
     def enough_order_size?(quantity, price)

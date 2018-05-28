@@ -1,7 +1,5 @@
-##
 # Wrapper implementation for Bitfinex API.
 # https://docs.bitfinex.com/docs
-#
 class BitfinexApiWrapper < ApiWrapper
   cattr_accessor(:max_retries) { 1000 }
 
@@ -9,48 +7,50 @@ class BitfinexApiWrapper < ApiWrapper
     @client ||= Bitfinex::Client.new
   end
 
-  def self.setup(settings)
+  def self.setup
     Bitfinex::Client.configure do |conf|
-      conf.api_key = settings.bitfinex.api_key
-      conf.secret = settings.bitfinex.api_secret
+      BitexBot::Settings.bitfinex do |settings|
+        conf.api_key = settings.api_key
+        conf.secret = settings.api_secret
+      end
     end
   end
 
   def self.amount_and_quantity(order_id, _transactions)
-    with_retry "find order #{order_id}" do
+    with_retry("find order #{order_id}") do
       order = Bitfinex::Client.new.order_status(order_id)
       [order['avg_execution_price'].to_d * order['executed_amount'].to_d, order['executed_amount'].to_d]
     end
   end
 
   def self.balance
-    with_retry :balance do
+    with_retry(:balance) do
       balances = client.balances(type: 'exchange').map(&:symbolize_keys)
       balance_summary_parser(balances)
     end
   end
 
   def self.orders
-    with_retry :orders do
-      client.orders.map { |o| order_parser(o.symbolize_keys) }
+    with_retry(:orders) do
+      client.orders.map { |o| order_parser(BitfinexOrder.new(o)) }
     end
   end
 
   def self.order_book
-    with_retry :order_book do
+    with_retry(:order_book) do
       order_book_parser(client.orderbook.deep_symbolize_keys)
     end
   end
 
   def self.place_order(type, price, quantity)
-    with_retry "place order #{type} #{price} #{quantity}" do
+    with_retry("place order #{type} #{price} #{quantity}") do
       order_data = client.new_order('btcusd', quantity.round(4), 'exchange limit', type.to_s, price.round(2))
       BitfinexOrder.new(order_data.symbolize_keys)
     end
   end
 
   def self.transactions
-    with_retry :transactions do
+    with_retry(:transactions) do
       client.trades.map { |t| transaction_parser(t.symbolize_keys) }
     end
   end
@@ -103,14 +103,7 @@ class BitfinexApiWrapper < ApiWrapper
   #   was_forced: false, original_amount: '0.02', remaining_amount: '0.02', executed_amount: '0.0'
   # }
   def self.order_parser(order)
-    Order.new(
-      order[:id].to_s,
-      order[:side].to_sym,
-      order[:price].to_d,
-      order[:original_amount].to_d,
-      order[:timestamp].to_i,
-      BitfinexOrder.new(order)
-    )
+    Order.new(order.id.to_s, order.type, order.price, order.amount, order.datetime, order)
   end
 
   # {

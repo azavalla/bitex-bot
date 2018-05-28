@@ -42,19 +42,14 @@ describe BitexBot::Robot do
 
   let(:bot) { BitexBot::Robot.new }
 
-  it 'orderbook formed from your base currency and another quote currency' do
-    BitexBot::Settings.bitex.orderbook do |orderbook|
-      bot.base_currency.should eq orderbook.to_s.split('_')[0].upcase
+  it 'order book formed from your base currency and another quote currency' do
+    BitexBot::Settings.bitex.order_book do |order_book|
+      bot.base_currency.should eq order_book.to_s.split('_')[0].upcase
       bot.base_currency.should be_a String
 
-      bot.quote_currency.should eq orderbook.to_s.split('_')[1].upcase
+      bot.quote_currency.should eq order_book.to_s.split('_')[1].upcase
       bot.quote_currency.should be_a String
     end
-  end
-
-  it 'fx rate be a BigDecimal' do
-    bot.class.fx_rate.should be BitexBot::Settings.fx_rate
-    bot.class.fx_rate.should be_a BigDecimal
   end
 
   it 'Starts out by creating opening flows that timeout' do
@@ -163,12 +158,12 @@ describe BitexBot::Robot do
       bot.trade!
     end.to change { Mail::TestMailer.deliveries.count }.by(1)
     Timecop.travel 1.minute.from_now
-    stub_bitstamp_order_book # Re-stub so orderbook does not get old
+    stub_bitstamp_order_book # Re-stub so order book does not get old
     expect do
       bot.trade!
     end.not_to change { Mail::TestMailer.deliveries.count }
     Timecop.travel 31.minutes.from_now
-    stub_bitstamp_order_book # Re-stub so orderbook does not get old
+    stub_bitstamp_order_book # Re-stub so order book does not get old
     expect do
       bot.trade!
     end.to change { Mail::TestMailer.deliveries.count }.by(1)
@@ -185,14 +180,13 @@ describe BitexBot::Robot do
     end.to change { Mail::TestMailer.deliveries.count }.by(1)
 
     Timecop.travel(1.minute.from_now)
-    stub_bitstamp_order_book # Re-stub so orderbook does not get old
+    stub_bitstamp_order_book # Re-stub so order book does not get old
     expect do
       bot.trade!
     end.not_to change { Mail::TestMailer.deliveries.count }
 
     Timecop.travel(31.minutes.from_now)
-    stub_bitstamp_order_book # Re-stub so orderbook does not get old
-
+    stub_bitstamp_order_book # Re-stub so order book does not get old
     expect do
       bot.trade!
     end.to change { Mail::TestMailer.deliveries.count }.by(1)

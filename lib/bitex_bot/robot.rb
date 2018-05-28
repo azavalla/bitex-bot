@@ -9,18 +9,19 @@ trap 'INT' do
 end
 
 module BitexBot
-  ##
   # Documentation here!
-  #
   # rubocop:disable Metrics/ClassLength
   class Robot
-    cattr_accessor(:base_currency) { Settings.bitex.orderbook.to_s.split('_')[0].upcase }
-    cattr_accessor(:quote_currency) { Settings.bitex.orderbook.to_s.split('_')[1].upcase }
+    extend Forwardable
+
+    cattr_accessor(:base_currency) { Settings.bitex.order_book.to_s.split('_')[0].upcase }
+    cattr_accessor(:quote_currency) { Settings.bitex.order_book.to_s.split('_')[1].upcase }
 
     cattr_accessor :cooldown_until
     cattr_accessor(:current_cooldowns) { 0 }
+
     cattr_accessor :graceful_shutdown
-    cattr_accessor :logger do
+    cattr_accessor(:logger) do
       logdev = Settings.log.try(:file)
       STDOUT.sync = true unless logdev.present?
       Logger.new(logdev || STDOUT, 10, 10_240_000).tap do |log|
@@ -38,11 +39,7 @@ module BitexBot
     def self.setup
       Bitex.api_key = Settings.bitex.api_key
       Bitex.sandbox = Settings.sandbox
-      taker.setup(Settings)
-    end
-
-    def self.fx_rate
-      Settings.fx_rate
+      taker.setup
     end
 
     # Trade constantly respecting cooldown times so that we don't get banned by api clients.
@@ -64,10 +61,12 @@ module BitexBot
     def self.sleep_for(seconds)
       sleep(seconds)
     end
+    def_delegator self, :sleep_for
 
     def self.log(level, message)
       logger.send(level, message)
     end
+    def_delegator self, :log
 
     def self.with_cooldown
       yield.tap do
@@ -167,8 +166,8 @@ module BitexBot
     end
 
     def sync_closing_flows
-      orders = with_cooldown { BitexBot::Robot.taker.orders }
-      transactions = with_cooldown { BitexBot::Robot.taker.user_transactions }
+      orders = with_cooldown { Robot.taker.orders }
+      transactions = with_cooldown { Robot.taker.user_transactions }
 
       [BuyClosingFlow, SellClosingFlow].each do |kind|
         kind.active.each { |flow| flow.sync_closed_positions(orders, transactions) }
@@ -184,7 +183,7 @@ module BitexBot
       recent_buying, recent_selling = recent_operations
       return log(:debug, 'Not placing new orders, recent ones exist.') if [recent_buying, recent_selling].all?(&:present?)
 
-      balance = with_cooldown { BitexBot::Robot.taker.balance }
+      balance = with_cooldown { Robot.taker.balance }
       profile = Bitex::Profile.get
       total_usd = balance.usd.total + profile[:usd_balance]
       total_btc = balance.btc.total + profile[:btc_balance]
@@ -194,8 +193,8 @@ module BitexBot
       return log(:debug, 'Not placing new orders, USD target not met') if usd_target_met?(total_usd)
       return log(:debug, 'Not placing new orders, BTC target not met') if btc_target_met?(total_btc)
 
-      order_book = with_cooldown { BitexBot::Robot.taker.order_book }
-      transactions = with_cooldown { BitexBot::Robot.taker.transactions }
+      order_book = with_cooldown { Robot.taker.order_book }
+      transactions = with_cooldown { Robot.taker.transactions }
 
       create_buy_opening_flow(balance, order_book, transactions, profile) if recent_buying.nil?
       create_sell_opening_flow(balance, order_book, transactions, profile) if recent_selling.nil?
@@ -203,11 +202,8 @@ module BitexBot
     # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
     def recent_operations
-      [BuyOpeningFlow, SellOpeningFlow].map { |kind| kind.active.where('created_at > ?', threshold).first }
-    end
-
-    def threshold
-      (Settings.time_to_live / 2).seconds.ago
+      threshold = (Settings.time_to_live / 2).seconds.ago
+      [BuyOpeningFlow, SellOpeningFlow].map(&:active).map { |kind| kind.where('created_at > ?', threshold).first }
     end
 
     def sync_log(balance)
@@ -266,14 +262,6 @@ module BitexBot
 
     def create_sell_opening_flow(balance, order_book, transactions, profile)
       SellOpeningFlow.create_for_market(balance.usd.available, order_book.asks, transactions, profile[:fee], balance.fee, store)
-    end
-
-    def sleep_for(seconds)
-      self.class.sleep_for(seconds)
-    end
-
-    def log(level, message)
-      self.class.log(level, message)
     end
   end
   # rubocop:enable Metrics/ClassLength

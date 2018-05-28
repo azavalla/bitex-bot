@@ -1,6 +1,6 @@
 module BitexBot
   # A workflow for buying bitcoin in Bitex and selling on another exchange. The BuyOpeningFlow factory function estimates how
-  # much you could sell on the other exchange and calculates a reasonable price taking into account the remote orderbook and the
+  # much you could sell on the other exchange and calculates a reasonable price taking into account the remote order book and the
   # recent operated volume.
   #
   # When created, a BuyOpeningFlow places a Bid on Bitex for the calculated amount and price, when the Bid is matched on Bitex an
@@ -10,7 +10,6 @@ module BitexBot
   # created from its OpenBuy's
   #
   # @attr order_id The first thing a BuyOpeningFlow does is placing a Bid on Bitex, this is its unique id.
-  #
   class BuyOpeningFlow < OpeningFlow
     # Start a workflow for buying bitcoin on bitex and selling on the other exchange. The amount to be spent on bitex is
     # retrieved from Settings, if there is not enough on USD bitex or BTC on the other exchange then no
@@ -22,14 +21,14 @@ module BitexBot
     # @param order_book [[price, quantity]] a list of lists representing a bid order book in the other exchange.
     # @param transactions [Hash] a list of hashes representing all transactions in the other exchange:
     #   Each hash contains 'date', 'tid', 'price' and 'amount', where 'amount' is the BTC transacted.
-    # @param bitex_fee [BigDecimal] the transaction fee to pay on bitex.
-    # @param other_fee [BigDecimal] the transaction fee to pay on the other exchange.
+    # @param maker_fee [BigDecimal] the transaction fee to pay on maker exchange.
+    # @param taker_fee [BigDecimal] the transaction fee to pay on taker exchange.
     # @param store [Store] An updated config for this robot, mainly to use for profit.
     #
     # @return [BuyOpeningFlow] The newly created flow.
-    # @raise [CannotCreateFlow] If there's any problem creating this flow, for example when you run out of USD on
-    #   bitex or out of BTC on the other exchange.
-    def self.create_for_market(btc_balance, order_book, transactions, bitex_fee, other_fee, store)
+    # @raise [CannotCreateFlow] If there's any problem creating this flow, for example when you run out of USD on bitex or out
+    #   of BTC on the other exchange.
+    def self.create_for_market(btc_balance, order_book, transactions, maker_fee, taker_fee, store)
       super
     end
 
@@ -51,7 +50,7 @@ module BitexBot
 
     # create_for_market helpers
     def self.maker_price(bitcoin_to_resell)
-      (value_to_use / bitcoin_to_resell) * (1 - profit / 100.to_d)
+      value_to_use / bitcoin_to_resell * (1 - profit / 100)
     end
 
     def self.order_class

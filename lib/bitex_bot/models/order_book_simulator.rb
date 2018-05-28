@@ -1,11 +1,10 @@
 module BitexBot
-  #  QUOTE_CURRENCY = Settings.bitex.orderbook.quote
+  #  QUOTE_CURRENCY = Settings.bitex.order_book.quote
   #
   # Simulates hitting an order-book to find a price at which an order can be assumed to get executed completely.
   # It essentially drops the start of the order book, to account for price volatility (assuming those orders may be taken by
   # someone else), and then digs until the given QUOTE_CURRENCY amount or BTC quantity are reached, finally returning
   # the last price seen, which is the 'safest' price at which we can expect this order to get executed quickly.
-  #
   class OrderBookSimulator
     # @param volatility [Integer] How many seconds of recent volume we need to skip from the start of the order book to be more
     #   certain that our order will get executed.

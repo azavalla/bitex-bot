@@ -3,19 +3,19 @@ require 'bigdecimal'
 require 'bigdecimal/util'
 
 module BitexBot
-  ##
   # Documentation here!
-  #
   class FileSettings < ::Hashie::Clash
-    def method_missing(name, *args)
-      return super unless args.size == 1 && args.none?
+    def method_missing(name, *args, &block)
+      return super unless args.none? && args.size == 1
       self[name] = args.first
+    end
+
+    def respond_to_missing?(method_name, include_private = false)
+      respond_to?(method_name) || super
     end
   end
 
-  ##
   # This class load settings file, else write a sample file.
-  #
   class SettingsClass < ::Hashie::Mash
     include ::Hashie::Extensions::Mash::SymbolizeKeys
 

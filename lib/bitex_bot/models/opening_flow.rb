@@ -2,7 +2,6 @@ module BitexBot
   # Any arbitrage workflow has 2 stages, opening positions and then closing them.
   # The OpeningFlow stage places an order on bitex, detecting and storing all transactions spawn from that order as
   # Open positions.
-  #
   class OpeningFlow < ActiveRecord::Base
     self.abstract_class = true
 
@@ -15,7 +14,7 @@ module BitexBot
     cattr_accessor(:statuses) { %w[executing settling finalised] }
 
     def self.active
-      where('status != "finalised"')
+      where.not(status: :finalised)
     end
 
     def self.old_active
@@ -24,16 +23,16 @@ module BitexBot
     # @!endgroup
 
     # This use hooks methods, these must be defined in the subclass:
-    #   #bitex_price
+    #   #maker_price
     #   #order_class
     #   #remote_value_to_use
     #   #safest_price
     #   #value_to_use
     # rubocop:disable Metrics/AbcSize
-    def self.create_for_market(remote_balance, orderbook, transactions, maker_fee, taker_fee, store)
+    def self.create_for_market(remote_balance, order_book, transactions, maker_fee, taker_fee, store)
       self.store = store
 
-      remote_value, safest_price = calc_remote_value(maker_fee, taker_fee, orderbook, transactions)
+      remote_value, safest_price = calc_remote_value(maker_fee, taker_fee, order_book, transactions)
       raise CannotCreateFlow, "Needed #{remote_value} but you only have #{remote_balance}" unless
         enough_remote_funds?(remote_balance, remote_value)
 
@@ -61,8 +60,8 @@ module BitexBot
     # rubocop:enable Metrics/AbcSize
 
     # create_for_market helpers
-    def self.calc_remote_value(bitex_fee, other_fee, order_book, transactions)
-      value_to_use_needed = (value_to_use + bitex_plus(bitex_fee)) / (1 - other_fee / 100.to_d)
+    def self.calc_remote_value(maker_fee, taker_fee, order_book, transactions)
+      value_to_use_needed = (value_to_use + maker_plus(maker_fee)) / (1 - taker_fee / 100)
       safest_price = safest_price(transactions, order_book, value_to_use_needed)
       remote_value = remote_value_to_use(value_to_use_needed, safest_price)
 
@@ -70,7 +69,7 @@ module BitexBot
     end
 
     def self.create_order!(bitex_price)
-      order_class.create!(Settings.bitex.orderbook, value_to_use, bitex_price, true)
+      order_class.create!(Settings.bitex.order_book, value_to_use, bitex_price, true)
     rescue StandardError => e
       raise CannotCreateFlow, e.message
     end
@@ -83,12 +82,12 @@ module BitexBot
       remote_balance >= remote_value
     end
 
-    def self.bitex_plus(fee)
-      value_to_use * fee / 100.0
+    def self.maker_plus(fee)
+      value_to_use * fee / 100
     end
 
     def self.fx_rate
-      store.fx_rate || Robot.fx_rate
+      store.fx_rate || Settings.fx_rate
     end
     # end: create_for_market helpers
 
@@ -131,7 +130,7 @@ module BitexBot
       fit_operation_kind?(transaction) &&
         !expired_transaction?(transaction, threshold) &&
         !open_position?(transaction) &&
-        expected_orderbook?(transaction)
+        expected_order_book?(transaction)
     end
 
     def self.fit_operation_kind?(transaction)
@@ -146,8 +145,8 @@ module BitexBot
       open_position_class.find_by_transaction_id(transaction.id)
     end
 
-    def self.expected_orderbook?(transaction)
-      transaction.orderbook == Settings.bitex.orderbook
+    def self.expected_order_book?(transaction)
+      transaction.order_book == Settings.bitex.order_book
     end
     # end: sync_open_positions helpers
 

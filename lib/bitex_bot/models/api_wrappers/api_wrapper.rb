@@ -1,68 +1,62 @@
-##
 # This class represents the general behaviour for trading platform wrappers.
-#
 class ApiWrapper
   MIN_AMOUNT = 5
 
   Transaction = Struct.new(
-    :id, # Integer
-    :price, # Decimal
-    :amount, # Decimal
-    :timestamp # Integer Epoch
+    :id,       # Integer
+    :price,    # Decimal
+    :amount,   # Decimal
+    :timestamp # Epoch Integer
   )
 
   Order = Struct.new(
-    :id, # String
-    :type, # Symbol
-    :price, # Decimal
-    :amount, # Decimal
+    :id,        # String
+    :type,      # Symbol
+    :price,     # Decimal
+    :amount,    # Decimal
     :timestamp, # Integer
-    :raw_order # Actual order object
+    :raw_order  # Actual order object
   ) do
     def method_missing(method_name, *args, &block)
-      raw_order.send(method_name, *args, &block) || super
+      raw_order.respond_to?(method_name) ? raw_order.send(method_name, *args, &block) : super
     end
 
     def respond_to_missing?(method_name, include_private = false)
-      respond_to_custom_methods?(method_name) || super
-    end
-
-    def respond_to_custom_methods?(method_name)
-      %i[cancel!].include?(method_name)
+      raw_order.respond_to?(method_name) || super
     end
   end
 
   OrderBook = Struct.new(
     :timestamp, # Integer
-    :bids, # [OrderSummary]
-    :asks # [OrderSummary]
+    :bids,      # [OrderSummary]
+    :asks       # [OrderSummary]
   )
 
   OrderSummary = Struct.new(
-    :price, # Decimal
+    :price,   # Decimal
     :quantity # Decimal
   )
 
   BalanceSummary = Struct.new(
     :btc, # Balance
     :usd, # Balance
-    :fee # Decimal
+    :fee  # Decimal
   )
 
   Balance = Struct.new(
-    :total, # Decimal
+    :total,    # Decimal
     :reserved, # Decimal
     :available # Decimal
   )
 
   UserTransaction = Struct.new(
     :order_id, # Integer
-    :usd, # Decimal
-    :btc, # Decimal,
-    :btc_usd, # Decimal
-    :fee, # Decimal,
-    :type, # Integer
-    :timestamp # Integer Epoch
+    :usd,      # Decimal
+    :btc,      # Decimal
+    :btc_usd,  # Decimal
+    :fee,      # Decimal
+    :type,     # Integer
+    :timestamp # Epoch Integer
   )
 
   class << self
@@ -102,8 +96,8 @@ class ApiWrapper
     def place_order(type, price, quantity)
       order = send_order(type, price, quantity)
       return order unless order.nil? || order.id.nil?
-      BitexBot::Robot.log(:debug, "Captured error when placing order on #{self.class.name}")
 
+      BitexBot::Robot.log(:debug, "Captured error when placing order on #{self.class.name}")
       # Order may have gone through and be stuck somewhere in Wrapper's piipeline.
       # We just sleep for a bit and then look for the order.
       20.times do

@@ -11,7 +11,7 @@ describe BitexBot::SellOpeningFlow do
 
   let(:order_id) { 12_345 }
   let(:time_to_live) { 3 }
-  let(:orderbook) { bitstamp_api_wrapper_order_book }
+  let(:order_book) { bitstamp_api_wrapper_order_book }
   let(:transactions) { bitstamp_api_wrapper_transactions_stub }
   let(:maker_fee) { 0.5.to_d }
   let(:taker_fee) { 0.25.to_d }
@@ -24,7 +24,7 @@ describe BitexBot::SellOpeningFlow do
     end
 
     let(:flow) do
-      BitexBot::SellOpeningFlow.create_for_market(usd_balance, orderbook.asks, transactions, maker_fee, taker_fee, store)
+      BitexBot::SellOpeningFlow.create_for_market(usd_balance, order_book.asks, transactions, maker_fee, taker_fee, store)
     end
 
     context 'with USD balance 1000' do
@@ -172,11 +172,11 @@ describe BitexBot::SellOpeningFlow do
       end.to change { BitexBot::OpenSell.count }.by(1)
     end
 
-    it 'does not register buys from another orderbook' do
+    it 'does not register buys from another order book' do
       flow.order_id.should eq order_id
 
       trade_id = 23_456
-      Bitex::Trade.stub(all: [build(:bitex_sell, id: trade_id, orderbook: :btc_ars)])
+      Bitex::Trade.stub(all: [build(:bitex_sell, id: trade_id, order_book: :btc_ars)])
 
       expect do
         BitexBot::SellOpeningFlow.sync_open_positions.should be_empty

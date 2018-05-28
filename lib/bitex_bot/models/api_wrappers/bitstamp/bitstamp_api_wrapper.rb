@@ -1,13 +1,13 @@
-##
 # Wrapper implementation for Bitstamp API.
-# https://www.bitstamp.net/api/
 #
 class BitstampApiWrapper < ApiWrapper
-  def self.setup(settings)
+  def self.setup
     Bitstamp.setup do |config|
-      config.key = settings.bitstamp.api_key
-      config.secret = settings.bitstamp.secret
-      config.client_id = settings.bitstamp.client_id.to_s
+      BitexBot::Settings.bitstamp do |settings|
+        config.key = settings.api_key
+        config.secret = settings.secret
+        config.client_id = settings.client_id
+      end
     end
   end
 
@@ -15,6 +15,7 @@ class BitstampApiWrapper < ApiWrapper
     closes = transactions.select { |t| t.order_id.to_s == order_id }
     amount = closes.map { |c| c.usd.to_d }.sum.abs
     quantity = closes.map { |c| c.btc.to_d }.sum.abs
+
     [amount, quantity]
   end
 
@@ -38,11 +39,11 @@ class BitstampApiWrapper < ApiWrapper
     age = Time.now.to_i - book[:timestamp].to_i
 
     return order_book_parser(book) if age <= 300
-    BitexBot::Robot.log(:info, "Refusing to continue as orderbook is #{age} seconds old")
+    BitexBot::Robot.log(:info, "Refusing to continue as order book is #{age} seconds old")
     order_book(retries)
   rescue StandardError
     raise if retries.zero?
-    BitexBot::Robot.log(:info, "Bitstamp orderbook failed, retrying #{retries} more times")
+    BitexBot::Robot.log(:info, "Bitstamp order book failed, retrying #{retries} more times")
     BitexBot::Robot.sleep_for 1
     order_book(retries - 1)
   end
@@ -122,7 +123,6 @@ class BitstampApiWrapper < ApiWrapper
   #   @datetime='2013-09-26 13:28:55'
   # >
   def self.user_transaction_parser(user_transaction)
-    timestamp = Time.new(user_transaction.datetime).to_i
     UserTransaction.new(
       user_transaction.order_id,
       user_transaction.usd.to_d,
@@ -130,7 +130,7 @@ class BitstampApiWrapper < ApiWrapper
       user_transaction.btc_usd.to_d,
       user_transaction.fee.to_d,
       user_transaction.type,
-      timestamp
+      Time.new(user_transaction.datetime).to_i
     )
   end
 end
