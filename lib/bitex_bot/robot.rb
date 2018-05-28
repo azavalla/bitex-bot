@@ -34,6 +34,7 @@ module BitexBot
         # rubocop:enable Lint/UnusedBlockArgument
       end
     end
+
     cattr_accessor(:taker) { "#{Settings.taker.capitalize}ApiWrapper".constantize }
 
     def self.setup

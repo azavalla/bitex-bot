@@ -86,8 +86,8 @@ module BitexBot
         order.cancel!
         Robot.log(:debug, "Finalised #{order.class}##{order.id}")
       end
-    rescue StandardError => error
-      Robot.log(:debug, error)
+    rescue StandardError => e
+      Robot.log(:debug, e)
       nil # just pass, we'll keep on trying until it's not in orders anymore.
     end
 

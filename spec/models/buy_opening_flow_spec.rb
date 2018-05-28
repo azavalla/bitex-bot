@@ -173,10 +173,7 @@ describe BitexBot::BuyOpeningFlow do
     end
 
     it 'does not register buys from another order book' do
-      flow.order_id.should eq order_id
-
-      trade_id = 23_456
-      Bitex::Trade.stub(all: [build(:bitex_buy, id: trade_id, order_book: :btc_ars)])
+      Bitex::Trade.stub(all: [build(:bitex_sell, id: 23456, order_book: :btc_ars)])
 
       expect do
         BitexBot::BuyOpeningFlow.sync_open_positions.should be_empty
