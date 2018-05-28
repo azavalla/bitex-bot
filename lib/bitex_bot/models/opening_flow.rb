@@ -100,6 +100,7 @@ module BitexBot
 
       Bitex::Trade.all.map do |transaction|
         next unless sought_transaction?(threshold, transaction)
+
         flow = find_by_order_id(transaction_order_id(transaction))
         next unless flow.present?
 
@@ -172,7 +173,7 @@ module BitexBot
 
     # finalise! helpers
     def canceled_or_completed?(order)
-      %i[cancelled completed].any? { |status| status == order.status }
+      %i[cancelled completed].any? { |status| order.status == status }
     end
 
     def do_finalize
