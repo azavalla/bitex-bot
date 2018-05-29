@@ -3,7 +3,7 @@ require 'spec_helper'
 describe BitexBot::Settings do
   describe '#to_hash' do
     it 'returns a symbolized hash' do
-      expect(BitexBot::Settings.to_hash).to eq(
+      BitexBot::Settings.to_hash.should eq ({
         bitex: { api_key: 'your_bitex_api_key_which_should_be_kept_safe', order_book: :btc_usd },
         fx_rate: 1.to_d,
         bitfinex: { api_key: 'your_api_key', api_secret: 'your_api_secret' },
@@ -30,7 +30,7 @@ describe BitexBot::Settings do
         selling: { quantity_to_sell_per_order: 0.1.to_d, profit: 0.5.to_d },
         taker: :bitstamp,
         time_to_live: 20
-      )
+      })
     end
   end
 end
