@@ -23,10 +23,9 @@ module BitexStubs
         bid.status = :executing
         bid.order_book = order_book
         bid.stub(:cancel!) do
-          bid.tap do |b|
-            b.status = :cancelled
-            BitexStubs.active_bids.delete(b.id)
-          end
+          bid.status = :cancelled
+          BitexStubs.active_bids.delete(bid.id)
+          bid
         end
         BitexStubs.bids[bid.id] = bid
         BitexStubs.active_bids[bid.id] = bid
@@ -45,13 +44,13 @@ module BitexStubs
         ask.status = :executing
         ask.order_book = order_book
         ask.stub(:cancel!) do
-          ask.tap do |a|
-            a.status = :cancelled
-            BitexStubs.active_asks.delete(a.id)
-          end
+          ask.status = :cancelled
+          BitexStubs.active_asks.delete(ask.id)
+          ask
         end
         BitexStubs.asks[ask.id] = ask
         BitexStubs.active_asks[ask.id] = ask
+        ask
       end
     end
   end

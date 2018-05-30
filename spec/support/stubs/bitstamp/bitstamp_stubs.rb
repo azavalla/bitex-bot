@@ -17,7 +17,7 @@ module BitstampStubs
     end
   end
 
-  # BitstampApiWrapper stubs
+  # ApiWrapper stubs
   def stub_bitstamp_balance(balance: '0.5', reserved: '1.5', available: '2.0', fee: '0.2')
     Bitstamp.stub(:balance) do
       {
@@ -57,9 +57,7 @@ module BitstampStubs
     end
   end
 
-  # [<Bitstamp::UserTransaction
-  #   @id=76, @order_id=14, @type=1, @usd='0.00', @btc='-3.078', @btc_usd='0.00', @fee='0.00', @datetime='2013-09-26 13:46:59'>
-  # ]
+  # [<Bitstamp::UserTransaction @id=76, @order_id=14, @type=1, @usd='0.00', @btc='-3.078', @btc_usd='0.00', @fee='0.00', @datetime='2013-09-26 13:46:59'>]
   def stub_bitstamp_user_transactions(count: 1, usd: 1.5, btc: 2.5, btc_usd: 3.5, fee: 0.05)
     Bitstamp.user_transactions.stub(:all) do
       count.times.map do |i|
@@ -89,8 +87,8 @@ module BitstampStubs
     ratio = options[:ratio] || 1
     transactions = Bitstamp.orders.all.map { |o| transaction(o, *usd_and_btc(o), ratio) }
     Bitstamp.stub(user_transactions: double(all: transactions))
-    return unless ratio == 1
 
+    return unless ratio == 1
     stub_bitstamp_trade(:sell)
     stub_bitstamp_trade(:buy)
   end
