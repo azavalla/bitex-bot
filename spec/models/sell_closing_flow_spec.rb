@@ -35,8 +35,7 @@ describe BitexBot::SellClosingFlow do
       open_two.reload.closing_flow.should eq flow
 
       flow.open_positions.should eq [open_one, open_two]
-      debugger
-      flow.desired_price.should eq '290.497512437809'.to_d
+      flow.desired_price.should eq '290.4_975_124_378_109'.to_d
       flow.quantity.should eq 2.01
       flow.amount.should eq 604
       flow.btc_profit.should be_nil

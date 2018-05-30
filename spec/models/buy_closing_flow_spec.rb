@@ -19,7 +19,7 @@ describe BitexBot::BuyClosingFlow do
       flow.quantity.should eq 2
       flow.amount.should eq 600
       flow.btc_profit.should be_nil
-      flow.fiat_profit.should be_norder_id
+      flow.fiat_profit.should be_nil
       close.order_id.should eq order_id
       close.amount.should be_nil
       close.quantity.should be_nil
@@ -34,7 +34,7 @@ describe BitexBot::BuyClosingFlow do
       open_two.reload.closing_flow.should eq flow
 
       flow.open_positions.should eq [open_one, open_two]
-      flow.desired_price.should eq '310.4975124378109'.to_d
+      flow.desired_price.should eq '310.4_975_124_378_109'.to_d
       flow.quantity.should eq 2.01.to_d
       flow.amount.should eq 604
       flow.btc_profit.should be_nil
@@ -75,12 +75,12 @@ describe BitexBot::BuyClosingFlow do
       flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
 
       close = flow.close_positions.last
-      close.amount.should eq 624.105.to_d
-      close.quantity.should eq 2.01.to_d
+      close.amount.should == 624.105
+      close.quantity.should == 2.01
 
       flow.should be_done
-      flow.btc_profit.should eq 0
-      flow.fiat_profit.should eq 20.105.to_d
+      flow.btc_profit.should be_zero
+      flow.fiat_profit.should == 20.105
     end
 
     context 'with other fx rate and closed open positions' do
@@ -124,7 +124,7 @@ describe BitexBot::BuyClosingFlow do
       expect do
         flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
       end.not_to change { BitexBot::CloseBuy.count }
-      Bitstamp.orders.all.size.should eq 0
+      Bitstamp.orders.all.size.should be_zero
       flow.should_not be_done
 
       # Next time we try to sync_closed_positions the flow
@@ -135,8 +135,8 @@ describe BitexBot::BuyClosingFlow do
       end.to change { BitexBot::CloseBuy.count }.by(1)
 
       flow.close_positions.first.tap do |close|
-        close.amount.should eq 312.0525.to_d
-        close.quantity.should eq 1.005
+        close.amount.should == 312.0_525
+        close.quantity.should == 1.005
       end
 
       # The second ask is executed completely so we can wrap it up and consider
@@ -144,12 +144,12 @@ describe BitexBot::BuyClosingFlow do
       stub_bitstamp_orders_into_transactions
       flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
       flow.close_positions.last.tap do |close|
-        close.amount.should eq 312.02235.to_d
-        close.quantity.should eq 1.005.to_d
+        close.amount.should == 312.02_235
+        close.quantity.should == 1.005
       end
       flow.should be_done
-      flow.btc_profit.should eq 0
-      flow.fiat_profit.should eq 20.07485.to_d
+      flow.btc_profit.should be_zero
+      flow.fiat_profit.should == 20.07_485
     end
 
     it 'does not retry for an amount less than minimum_for_closing' do
@@ -163,8 +163,8 @@ describe BitexBot::BuyClosingFlow do
       end.not_to change { BitexBot::CloseBuy.count }
 
       flow.should be_done
-      flow.btc_profit.should eq 0.00201.to_d
-      flow.fiat_profit.should eq 19.480895.to_d
+      flow.btc_profit.should == 0.00_201
+      flow.fiat_profit.should == 19.480_895
     end
 
     it 'can lose USD if price had to be dropped dramatically' do
@@ -182,15 +182,15 @@ describe BitexBot::BuyClosingFlow do
 
       flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
       flow.reload.should be_done
-      flow.btc_profit.should eq 0
-      flow.fiat_profit.should eq '-34.165'.to_d
+      flow.btc_profit.should be_zero
+      flow.fiat_profit.should == -34.165
     end
   end
 
   describe 'when there are errors placing the closing order' do
     it 'keeps trying to place a closed position on bitstamp errors' do
       BitstampApiWrapper.stub(send_order: nil)
-      BitstampApiWrapper.stub(find_lost: nil) 
+      BitstampApiWrapper.stub(find_lost: nil)
 
       open = create :open_buy
       expect do
