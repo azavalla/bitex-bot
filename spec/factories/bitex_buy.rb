@@ -3,10 +3,10 @@ FactoryBot.define do
     id         12_345_678
     bid_id     12_345
     order_book :btc_usd
-    quantity   2.to_d
-    amount     600.to_d
-    fee        0.05.to_d
-    price      300.to_d
+    quantity   2
+    amount     600
+    fee        0.05
+    price      300
     created_at Time.now
   end
 end
