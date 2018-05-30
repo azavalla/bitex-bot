@@ -11,7 +11,7 @@ time_to_live 20
 # Use sandbox environments instead of live environments only available for Bitex and Itbit.
 sandbox false
 
-# Which market to use for taking (we're always makers on Bitex), vali values are: [:itbit, :bitstamp, :bitfinex, :kraken].
+# Which market to use for taking (we're always makers on Bitex), vali values are: [:itbit, :bitstamp, :kraken].
 taker :bitstamp
 
 # Settings for buying on Bitex and selling on Bitstamp.
@@ -58,9 +58,6 @@ bitstamp api_key: 'YOUR_API_KEY', secret: 'YOUR_API_SECRET', client_id: 'YOUR_BI
 
 # These are passed in to the Itbit gem: https://github.com/bitex-la/itbit.
 itbit client_key: 'the-client-key', secret: 'the-secret', user_id: 'the-user-id', default_wallet_id: 'wallet-000'
-
-# These are passed in to the Bitfinex gem: https://github.com/bitfinexcom/bitfinex-api-rb.
-bitfinex api_key: 'your_api_key', api_secret: 'your_api_secret'
 
 # These are passed in to the Kraken gem: https://github.com/shideneyu/kraken_client.
 kraken api_key: 'your_api_key', api_secret: 'your_api_secret'
