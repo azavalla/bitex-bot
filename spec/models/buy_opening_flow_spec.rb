@@ -30,6 +30,11 @@ describe BitexBot::BuyOpeningFlow do
     context 'with BTC balance 100' do
       let(:btc_balance) { 100.to_d }
 
+      it 'order has expected order book' do
+        order = subject.class.order_class.find(flow.order_id)
+        order.order_book.should eq BitexBot::Settings.bitex.order_book
+      end
+
       it 'spends 50 usd' do
         amount_to_spend = 50.to_d
         suggested_closing_price = 20.to_d
@@ -185,6 +190,16 @@ describe BitexBot::BuyOpeningFlow do
       expect do
         BitexBot::BuyOpeningFlow.sync_open_positions.should be_empty
       end.not_to change { BitexBot::OpenBuy.count }
+    end
+  end
+
+  it 'order book formed from your base currency and another quote currency' do
+    BitexBot::Settings.bitex.order_book do |order_book|
+      subject.class.base_currency.should eq order_book.to_s.split('_')[0].upcase
+      subject.class.base_currency.should be_a String
+
+      subject.class.quote_currency.should eq order_book.to_s.split('_')[1].upcase
+      subject.class.quote_currency.should be_a String
     end
   end
 end

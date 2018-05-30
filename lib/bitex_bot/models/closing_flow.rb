@@ -42,11 +42,11 @@ module BitexBot
     end
 
     def estimate_fiat_profit
-      estimate_amount_positions_balance / fx_rate
+      raise 'self subclass responsibility'
     end
 
-    def amount_positions_balance
-      raise 'self subclass responsibility'
+    def positions_balance_amount
+      close_positions.sum(:amount) * fx_rate
     end
 
     def fx_rate

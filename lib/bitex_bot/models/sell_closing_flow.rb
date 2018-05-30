@@ -14,8 +14,8 @@ module BitexBot
 
     # create_or_cancel! helpers
     # The amount received when selling initially, minus the amount spent re-buying the sold coins.
-    def estimate_amount_positions_balance
-      open_positions.sum(:amount) - close_positions.sum(:amount)
+    def estimate_fiat_profit
+      open_positions.sum(:amount) - positions_balance_amount
     end
 
     # The coins we actually bought minus the coins we were supposed to re-buy.

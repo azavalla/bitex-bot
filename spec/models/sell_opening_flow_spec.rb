@@ -30,6 +30,11 @@ describe BitexBot::SellOpeningFlow do
     context 'with USD balance 1000' do
       let(:usd_balance) { 1_000.to_d }
 
+      it 'order has expected order book' do
+        order = subject.class.order_class.find(flow.order_id)
+        order.order_book.should eq BitexBot::Settings.bitex.order_book
+      end
+
       it 'sells 2 btc' do
         quantity_to_sell = 2.to_d
         suggested_closing_price = 20.to_d
@@ -185,6 +190,16 @@ describe BitexBot::SellOpeningFlow do
       expect do
         BitexBot::SellOpeningFlow.sync_open_positions.should be_empty
       end.not_to change { BitexBot::OpenSell.count }
+    end
+  end
+
+  it 'order book formed from your base currency and another quote currency' do
+    BitexBot::Settings.bitex.order_book do |order_book|
+      subject.class.base_currency.should eq order_book.to_s.split('_')[0].upcase
+      subject.class.base_currency.should be_a String
+
+      subject.class.quote_currency.should eq order_book.to_s.split('_')[1].upcase
+      subject.class.quote_currency.should be_a String
     end
   end
 end

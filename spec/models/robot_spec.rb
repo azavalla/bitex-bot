@@ -42,16 +42,6 @@ describe BitexBot::Robot do
 
   let(:bot) { BitexBot::Robot.new }
 
-  it 'order book formed from your base currency and another quote currency' do
-    BitexBot::Settings.bitex.order_book do |order_book|
-      bot.base_currency.should eq order_book.to_s.split('_')[0].upcase
-      bot.base_currency.should be_a String
-
-      bot.quote_currency.should eq order_book.to_s.split('_')[1].upcase
-      bot.quote_currency.should be_a String
-    end
-  end
-
   it 'Starts out by creating opening flows that timeout' do
     stub_bitex_orders
     stub_bitstamp_api_wrapper_order_book
@@ -204,15 +194,5 @@ describe BitexBot::Robot do
     expect do
       bot.trade!
     end.to change { Mail::TestMailer.deliveries.count }.by(1)
-  end
-
-  it 'order book formed from your base currency and another quote currency' do
-    BitexBot::Settings.bitex.order_book do |order_book|
-      bot.base_currency.should eq order_book.to_s.split('_')[0].upcase
-      bot.base_currency.should be_a String
-
-      bot.quote_currency.should eq order_book.to_s.split('_')[1].upcase
-      bot.quote_currency.should be_a String
-    end
   end
 end

@@ -13,6 +13,11 @@ module BitexBot
     # @return [Array<String>]
     cattr_accessor(:statuses) { %w[executing settling finalised] }
 
+    # Base currency for maker.
+    # @return <String>
+    cattr_accessor(:base_currency) { Settings.bitex.order_book.to_s.split('_')[0].upcase }
+    cattr_accessor(:quote_currency) { Settings.bitex.order_book.to_s.split('_')[1].upcase }
+
     def self.active
       where.not(status: :finalised)
     end
@@ -43,8 +48,7 @@ module BitexBot
 
       Robot.log(
         :info,
-        "Opening: Placed #{order_class.name} ##{order.id} #{value_to_use} @ #{Robot.quote_currency} #{bitex_price}"\
-        " (#{remote_value})"
+        "Opening: Placed #{order_class.name} ##{order.id} #{value_to_use} @ #{quote_currency} #{bitex_price} (#{remote_value})"
       )
 
       create!(

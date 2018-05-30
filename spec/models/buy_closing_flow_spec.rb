@@ -3,7 +3,7 @@ require 'spec_helper'
 describe BitexBot::BuyClosingFlow do
   it 'closes a single open position completely' do
     stub_bitstamp_trade(:sell)
-    open = create :open_buy
+    open = create(:open_buy)
     BitexBot::BuyClosingFlow.close_open_positions
     flow = BitexBot::BuyClosingFlow.last
 
@@ -24,8 +24,8 @@ describe BitexBot::BuyClosingFlow do
 
   it 'closes an aggregate of several open positions' do
     stub_bitstamp_trade(:sell)
-    open_one = create :tiny_open_buy
-    open_two = create :open_buy
+    open_one = create(:tiny_open_buy)
+    open_two = create(:open_buy)
     BitexBot::BuyClosingFlow.close_open_positions
     flow = BitexBot::BuyClosingFlow.last
 
@@ -35,8 +35,8 @@ describe BitexBot::BuyClosingFlow do
     open_two.reload.closing_flow.should == flow
 
     flow.open_positions.should == [open_one, open_two]
-    flow.desired_price.round(10).should == '310.4975124378'.to_d
-    flow.quantity.should == 2.01
+    flow.desired_price.should == '310.4975124378109'.to_d
+    flow.quantity.should == 2.01.to_d
     flow.amount.should == 604
     flow.btc_profit.should be_nil
     flow.fiat_profit.should be_nil
@@ -47,7 +47,7 @@ describe BitexBot::BuyClosingFlow do
   end
 
   it 'does not try to close if the amount is too low' do
-    open = create :tiny_open_buy
+    open = create(:tiny_open_buy)
     expect do
       BitexBot::BuyClosingFlow.close_open_positions.should be_nil
     end.not_to change { BitexBot::BuyClosingFlow.count }
@@ -63,8 +63,8 @@ describe BitexBot::BuyClosingFlow do
     before(:each) do
       stub_bitstamp_trade(:sell)
       stub_bitstamp_empty_user_transactions
-      create :tiny_open_buy
-      create :open_buy
+      create(:tiny_open_buy)
+      create(:open_buy)
     end
 
     it 'syncs the executed orders, calculates profit' do
@@ -75,18 +75,18 @@ describe BitexBot::BuyClosingFlow do
       flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
 
       close = flow.close_positions.last
-      close.amount.should == '624.105'.to_d
-      close.quantity.should == 2.01
+      close.amount.should == 624.105.to_d
+      close.quantity.should == 2.01.to_d
 
       flow.should be_done
       flow.btc_profit.should == 0
-      flow.fiat_profit.should == '20.105'.to_d
+      flow.fiat_profit.should == 20.105.to_d
     end
 
     context 'with other fx rate and closed open positions' do
       let(:fx_rate) { 10.to_d }
       let(:flow) { subject.class.last }
-      let(:estimate_amount_positions_balance) { flow.close_positions.sum(:amount) - flow.open_positions.sum(:amount) }
+      let(:positions_balance_amount) { flow.positions_balance_amount - flow.open_positions.sum(:amount) }
 
       before(:each) do
         BitexBot::Settings.stub(fx_rate: fx_rate)
@@ -99,7 +99,7 @@ describe BitexBot::BuyClosingFlow do
       it 'syncs the executed orders, calculates profit with other fx rate' do
         flow.should be_done
         flow.btc_profit.should be_zero
-        flow.fiat_profit.should eq estimate_amount_positions_balance / fx_rate
+        flow.fiat_profit.should eq positions_balance_amount
       end
     end
 
@@ -133,8 +133,9 @@ describe BitexBot::BuyClosingFlow do
       expect do
         flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
       end.to change { BitexBot::CloseBuy.count }.by(1)
+
       flow.close_positions.first.tap do |close|
-        close.amount.should == '312.0525'.to_d
+        close.amount.should == 312.0525.to_d
         close.quantity.should == 1.005
       end
 
@@ -143,12 +144,12 @@ describe BitexBot::BuyClosingFlow do
       stub_bitstamp_orders_into_transactions
       flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
       flow.close_positions.last.tap do |close|
-        close.amount.should == '312.02235'.to_d
-        close.quantity.should == 1.005
+        close.amount.should == 312.02235.to_d
+        close.quantity.should == 1.005.to_d
       end
       flow.should be_done
       flow.btc_profit.should == 0
-      flow.fiat_profit.should == '20.07485'.to_d
+      flow.fiat_profit.should == 20.07485.to_d
     end
 
     it 'does not retry for an amount less than minimum_for_closing' do
@@ -162,8 +163,8 @@ describe BitexBot::BuyClosingFlow do
       end.not_to change { BitexBot::CloseBuy.count }
 
       flow.should be_done
-      flow.btc_profit.should == 0.00201
-      flow.fiat_profit.should == '19.480895'.to_d
+      flow.btc_profit.should == 0.00201.to_d
+      flow.fiat_profit.should == 19.480895.to_d
     end
 
     it 'can lose USD if price had to be dropped dramatically' do
