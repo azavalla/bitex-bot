@@ -192,14 +192,4 @@ describe BitexBot::BuyOpeningFlow do
       end.not_to change { BitexBot::OpenBuy.count }
     end
   end
-
-  it 'order book formed from your base currency and another quote currency' do
-    BitexBot::Settings.bitex.order_book do |order_book|
-      subject.class.base_currency.should eq order_book.to_s.split('_')[0].upcase
-      subject.class.base_currency.should be_a String
-
-      subject.class.quote_currency.should eq order_book.to_s.split('_')[1].upcase
-      subject.class.quote_currency.should be_a String
-    end
-  end
 end

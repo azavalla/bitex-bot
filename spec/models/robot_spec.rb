@@ -19,15 +19,15 @@ describe BitexBot::Robot do
     Bitex::Profile.stub(
       get: {
         fee: 0.5,
-        usd_balance: 10000.0,  # Total USD balance
-        usd_reserved: 2000.0,  # USD reserved in open orders
-        usd_available: 8000.0, # USD available for trading
-        btc_balance: 20.0,     # Total BTC balance
-        btc_reserved: 5.0,     # BTC reserved in open orders
-        btc_available: 15.0,   # BTC available for trading
-        ltc_balance: 250.0,    # Total LTC balance
-        ltc_reserved: 100.0,   # LTC reserved in open orders
-        ltc_available: 150.0   # Total LTC balance
+        usd_balance: 10_000.0,  # Total USD balance
+        usd_reserved: 2_000.0,  # USD reserved in open orders
+        usd_available: 8_000.0, # USD available for trading
+        btc_balance: 20.0,      # Total BTC balance
+        btc_reserved: 5.0,      # BTC reserved in open orders
+        btc_available: 15.0,    # BTC available for trading
+        ltc_balance: 250.0,     # Total LTC balance
+        ltc_reserved: 100.0,    # LTC reserved in open orders
+        ltc_available: 150.0    # Total LTC balance
       }
     )
 
@@ -121,9 +121,9 @@ describe BitexBot::Robot do
     end.not_to change { BitexBot::BuyOpeningFlow.count }
   end
 
-  it 'stops trading when btc stop is reached' do
+  it 'stops trading when fiat stop is reached' do
     other_bot = BitexBot::Robot.new
-    other_bot.store.usd_stop = 11000
+    other_bot.store.btc_stop = 30
     other_bot.store.save!
     expect do
       bot.trade!
@@ -139,10 +139,19 @@ describe BitexBot::Robot do
     end.not_to change { BitexBot::BuyOpeningFlow.count }
   end
 
+  it 'stops trading when btc stop is reached' do
+    other_bot = BitexBot::Robot.new
+    other_bot.store.fiat_stop = 11000
+    other_bot.store.save!
+    expect do
+      bot.trade!
+    end.not_to change { BitexBot::BuyOpeningFlow.count }
+  end
+
   it 'warns every 30 minutes when usd warn is reached' do
     Bitex::Trade.stub(all: [])
     other_bot = BitexBot::Robot.new
-    other_bot.store.usd_warning = 11000
+    other_bot.store.fiat_warning = 11000
     other_bot.store.save!
     expect do
       bot.trade!
@@ -182,9 +191,9 @@ describe BitexBot::Robot do
     end.to change { Mail::TestMailer.deliveries.count }.by(1)
   end
 
-  it 'updates taker_usd and taker_btc' do
+  it 'updates taker_fiat and taker_btc' do
     bot.trade!
-    bot.store.taker_usd.should_not be_nil
+    bot.store.taker_fiat.should_not be_nil
     bot.store.taker_btc.should_not be_nil
   end
 

@@ -46,11 +46,7 @@ module BitexBot
     end
 
     def positions_balance_amount
-      close_positions.sum(:amount) * fx_rate
-    end
-
-    def fx_rate
-      Store.first.try(:fx_rate) || Settings.fx_rate
+      close_positions.sum(:amount) * Settings.fx_rate
     end
 
     private
