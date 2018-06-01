@@ -26,6 +26,6 @@ module BitstampApiWrapperStubs
   end
 
   def bitstamp_api_wrapper_transactions_stub(price = 30.to_d, amount = 1.to_d)
-    5.times.map { |i| ApiWrapper::Transaction.new(i, price, amount, (i+1).seconds.ago.to_i) }
+    5.times.map { |i| ApiWrapper::Transaction.new(i, price, amount, (i + 1).seconds.ago.to_i) }
   end
 end

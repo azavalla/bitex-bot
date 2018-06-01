@@ -11,11 +11,10 @@ describe KrakenApiWrapper do
   it 'Sends User-Agent header' do
     stub_stuff =
       stub_request(:get, 'https://api.kraken.com/0/public/Depth?pair=XBTUSD')
-      .with(headers: { 'User-Agent': BitexBot.user_agent })
+        .with(headers: { 'User-Agent': BitexBot.user_agent })
 
     # We don't care about the response
-    KrakenApiWrapper.order_book rescue nil
-
+    expect { api_wrapper.order_book }.to raise_exception(StandardError)
     stub_stuff.should have_been_requested
   end
 

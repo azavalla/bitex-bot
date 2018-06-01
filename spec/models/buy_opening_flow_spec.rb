@@ -5,7 +5,7 @@ describe BitexBot::BuyOpeningFlow do
   it { should validate_presence_of :price }
   it { should validate_presence_of :value_to_use }
   it { should validate_presence_of :order_id }
-  it { should(validate_inclusion_of(:status).in_array(BitexBot::BuyOpeningFlow.statuses)) }
+  it { should(validate_inclusion_of(:status).in_array(subject.class.statuses)) }
 
   before(:each) { Bitex.api_key = 'valid_key' }
 
@@ -24,7 +24,7 @@ describe BitexBot::BuyOpeningFlow do
     end
 
     let(:flow) do
-      BitexBot::BuyOpeningFlow.create_for_market(btc_balance, order_book.bids, transactions, maker_fee, taker_fee, store)
+      subject.class.create_for_market(btc_balance, order_book.bids, transactions, maker_fee, taker_fee, store)
     end
 
     context 'with BTC balance 100' do
@@ -96,7 +96,7 @@ describe BitexBot::BuyOpeningFlow do
 
         expect do
           flow.should be_nil
-          BitexBot::BuyOpeningFlow.count.should be_zero
+          subject.class.count.should be_zero
         end.to raise_exception(BitexBot::CannotCreateFlow, 'Cannot Create')
       end
 
@@ -133,7 +133,7 @@ describe BitexBot::BuyOpeningFlow do
 
         expect do
           flow.should be_nil
-          BitexBot::BuyOpeningFlow.count.should be_zero
+          subject.class.count.should be_zero
         end.to raise_exception(BitexBot::CannotCreateFlow, 'Needed 6.716791979949874686733333333333333333 but you only have 1.0')
       end
     end
@@ -143,7 +143,7 @@ describe BitexBot::BuyOpeningFlow do
     before(:each) { stub_bitex_transactions }
 
     let(:flow) { create(:buy_opening_flow) }
-    let(:trades) { BitexBot::BuyOpeningFlow.sync_open_positions }
+    let(:trades) { subject.class.sync_open_positions }
     let(:trade_id) { 12_345_678 }
 
     it 'only gets buys' do
@@ -163,7 +163,7 @@ describe BitexBot::BuyOpeningFlow do
 
     it 'does not register the same buy twice' do
       flow.order_id.should eq order_id
-      BitexBot::BuyOpeningFlow.sync_open_positions
+      subject.class.sync_open_positions
 
       BitexBot::OpenBuy.count.should eq 1
 
@@ -181,14 +181,14 @@ describe BitexBot::BuyOpeningFlow do
       Bitex::Trade.stub(all: [build(:bitex_sell, id: 23456, order_book: :btc_ars)])
 
       expect do
-        BitexBot::BuyOpeningFlow.sync_open_positions.should be_empty
+        subject.class.sync_open_positions.should be_empty
       end.not_to change { BitexBot::OpenBuy.count }
       BitexBot::OpenBuy.count.should be_zero
     end
 
     it 'does not register buys from unknown bids' do
       expect do
-        BitexBot::BuyOpeningFlow.sync_open_positions.should be_empty
+        subject.class.sync_open_positions.should be_empty
       end.not_to change { BitexBot::OpenBuy.count }
     end
   end

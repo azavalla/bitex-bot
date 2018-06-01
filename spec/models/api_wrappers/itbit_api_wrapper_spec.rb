@@ -11,11 +11,10 @@ describe ItbitApiWrapper do
   it 'Sends User-Agent header' do
     stub_stuff =
       stub_request(:get, 'https://api.itbit.com/v1/markets/XBTUSD/order_book')
-      .with(headers: { 'User-Agent': BitexBot.user_agent })
+        .with(headers: { 'User-Agent': BitexBot.user_agent })
 
     # We don't care about the response
-    api_wrapper.order_book rescue nil
-
+    expect { api_wrapper.order_book }.to raise_exception(StandardError)
     stub_stuff.should have_been_requested
   end
 

@@ -11,11 +11,10 @@ describe BitstampApiWrapper do
   it 'Sends User-Agent header' do
     stub_stuff =
       stub_request(:post, 'https://www.bitstamp.net/api/v2/balance/btcusd/')
-      .with(headers: { 'User-Agent': BitexBot.user_agent })
+        .with(headers: { 'User-Agent': BitexBot.user_agent })
 
     # we don't care about the response
-    api_wrapper.balance rescue nil
-
+    expect { api_wrapper.balance }.to raise_exception(StandardError)
     stub_stuff.should have_been_requested
   end
 
@@ -90,9 +89,7 @@ describe BitstampApiWrapper do
     it 'raises OrderNotFound error on bitstamp errors' do
       Bitstamp.orders.stub(:buy) { raise OrderNotFound }
 
-      expect do
-        api_wrapper.place_order(:buy, 10, 100)
-      end.to raise_exception(OrderNotFound)
+      expect { api_wrapper.place_order(:buy, 10, 100) }.to raise_exception(OrderNotFound)
     end
   end
 

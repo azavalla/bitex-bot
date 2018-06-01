@@ -5,7 +5,7 @@ describe BitexBot::SellOpeningFlow do
   it { should validate_presence_of :price }
   it { should validate_presence_of :value_to_use }
   it { should validate_presence_of :order_id }
-  it { should(validate_inclusion_of(:status).in_array(BitexBot::SellOpeningFlow.statuses)) }
+  it { should(validate_inclusion_of(:status).in_array(subject.class.statuses)) }
 
   before(:each) { Bitex.api_key = 'valid_key' }
 
@@ -24,7 +24,7 @@ describe BitexBot::SellOpeningFlow do
     end
 
     let(:flow) do
-      BitexBot::SellOpeningFlow.create_for_market(usd_balance, order_book.asks, transactions, maker_fee, taker_fee, store)
+      subject.class.create_for_market(usd_balance, order_book.asks, transactions, maker_fee, taker_fee, store)
     end
 
     context 'with USD balance 1000' do
@@ -32,6 +32,7 @@ describe BitexBot::SellOpeningFlow do
 
       it 'order has expected order book' do
         order = subject.class.order_class.find(flow.order_id)
+
         order.order_book.should eq BitexBot::Settings.bitex.order_book
       end
 
@@ -76,11 +77,10 @@ describe BitexBot::SellOpeningFlow do
       end
 
       it 'raises the price to charge on bitex to take a profit' do
-        profit = 50.to_d
         quantity_to_sell = 4.to_d
         suggested_closing_price = 25.to_d
         usd_price = '37.78_195_488_721_804'.to_d
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: profit))
+        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 50.to_d))
 
         flow.order_id.should eq order_id
         flow.value_to_use.should eq quantity_to_sell
@@ -90,13 +90,12 @@ describe BitexBot::SellOpeningFlow do
       end
 
       it 'fails when there is a problem placing the ask on bitex' do
-        quantity_to_sell = 4.to_d
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0))
+        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 4, profit: 0))
         Bitex::Ask.stub(:create!) { raise StandardError, 'Cannot Create' }
 
         expect do
           flow.should be_nil
-          BitexBot::SellOpeningFlow.count.should be_zero
+          subject.class.count.should be_zero
         end.to raise_exception(BitexBot::CannotCreateFlow, 'Cannot Create')
       end
 
@@ -104,17 +103,15 @@ describe BitexBot::SellOpeningFlow do
         let(:store) { BitexBot::Store.new(selling_profit: 0.5) }
 
         it 'Prioritizes profit from it' do
-          quantity_to_sell = 2.to_d
           usd_price = '20.25_112_781_954_887'.to_d
-          BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0))
+          BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 2, profit: 0))
 
           flow.price.round(14).should eq usd_price
         end
       end
 
       it 'cancels the associated bitex ask' do
-        quantity_to_sell = 2.to_d
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0))
+        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 2, profit: 0))
 
         flow.finalise!.should be_truthy
         flow.should be_settling
@@ -128,12 +125,11 @@ describe BitexBot::SellOpeningFlow do
       let(:usd_balance) { 1.to_d }
 
       it 'fails when there are not enough USD to re-buy in the other exchange' do
-        quantity_to_sell = 4.to_d
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0))
+        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 4, profit: 0))
 
         expect do
           flow.should be_nil
-          BitexBot::SellOpeningFlow.count.should be_zero
+          subject.class.count.should be_zero
         end.to raise_exception(BitexBot::CannotCreateFlow, 'Needed 100.7518796992481203 but you only have 1.0')
       end
     end
@@ -143,19 +139,21 @@ describe BitexBot::SellOpeningFlow do
     before(:each) { stub_bitex_transactions }
 
     let(:flow) { create(:sell_opening_flow) }
-    let(:trades) { BitexBot::SellOpeningFlow.sync_open_positions }
+    let(:trades) { subject.class.sync_open_positions }
     let(:trade_id) { 12_345_678 }
+    let(:other_trade_id) { 23_456 }
 
     it 'only gets sells' do
       flow.order_id.should eq order_id
 
       expect do
         trades.size.should eq 1
+
         trades.sample.tap do |t|
           t.opening_flow.should eq flow
           t.transaction_id.should eq trade_id
-          t.price.should eq 300.0
-          t.amount.should eq 600.0
+          t.price.should eq 300
+          t.amount.should eq 600
           t.quantity.should eq 2
         end
       end.to change { BitexBot::OpenSell.count }.by(1)
@@ -163,33 +161,28 @@ describe BitexBot::SellOpeningFlow do
 
     it 'does not register the same buy twice' do
       flow.order_id.should eq order_id
-      BitexBot::SellOpeningFlow.sync_open_positions
+      subject.class.sync_open_positions
 
       BitexBot::OpenSell.count.should eq 1
 
       Timecop.travel(1.second.from_now)
-      trade_id = 23_456
-      stub_bitex_transactions(build(:bitex_sell, id: trade_id))
+      stub_bitex_transactions(build(:bitex_sell, id: other_trade_id))
 
       expect do
         trades.size.should eq 1
-        trades.sample.transaction_id.should eq trade_id
+        trades.sample.transaction_id.should eq other_trade_id
       end.to change { BitexBot::OpenSell.count }.by(1)
     end
 
     it 'does not register buys from another order book' do
-      Bitex::Trade.stub(all: [build(:bitex_sell, id: 23456, order_book: :btc_ars)])
+      Bitex::Trade.stub(all: [build(:bitex_sell, id: other_trade_id, order_book: :btc_ars)])
 
-      expect do
-        BitexBot::SellOpeningFlow.sync_open_positions.should be_empty
-      end.not_to change { BitexBot::OpenSell.count }
+      expect { subject.class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenSell.count }
       BitexBot::OpenSell.count.should be_zero
     end
 
     it 'does not register buys from unknown bids' do
-      expect do
-        BitexBot::SellOpeningFlow.sync_open_positions.should be_empty
-      end.not_to change { BitexBot::OpenSell.count }
+      expect { subject.class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenSell.count }
     end
   end
 end

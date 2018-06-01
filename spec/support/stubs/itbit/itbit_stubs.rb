@@ -31,22 +31,24 @@ module ItbitStubs
     Itbit::Order.stub(:all).with(hash_including(status: :open)) do
       count.times.map do |i|
         index = i + 1
-        Itbit::Order.new({
-          id: "id-#{index.to_s.rjust(3, '0')}",
-          wallet_id: "wallet-#{index.to_s.rjust(3, '0')}",
-          side: :buy,
-          instrument: :xbtusd,
-          type: :limit,
-          amount: (amount + i).to_d,
-          display_amount: (amount + i).to_d,
-          amount_filled: (amount + i).to_d,
-          price: (price + i).to_d,
-          volume_weighted_average_price: (price + i).to_d,
-          status: :open,
-          client_order_identifier: 'o',
-          metadata: { foo: 'bar' },
-          created_time: 1.seconds.ago.to_i
-        }.stringify_keys)
+        Itbit::Order.new(
+          {
+            id: "id-#{index.to_s.rjust(3, '0')}",
+            wallet_id: "wallet-#{index.to_s.rjust(3, '0')}",
+            side: :buy,
+            instrument: :xbtusd,
+            type: :limit,
+            amount: (amount + i).to_d,
+            display_amount: (amount + i).to_d,
+            amount_filled: (amount + i).to_d,
+            price: (price + i).to_d,
+            volume_weighted_average_price: (price + i).to_d,
+            status: :open,
+            client_order_identifier: 'o',
+            metadata: { foo: 'bar' },
+            created_time: 1.seconds.ago.to_i
+          }.stringify_keys
+        )
       end
     end
   end

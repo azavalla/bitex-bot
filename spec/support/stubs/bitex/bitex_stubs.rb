@@ -12,8 +12,6 @@ module BitexStubs
     Bitex::Ask.stub(:find) { |id| BitexStubs.asks[id] }
 
     Bitex::Bid.stub(:create!) do |order_book, to_spend, price|
-      order_book.should eq BitexBot::Settings.bitex.order_book
-
       Bitex::Bid.new.tap do |bid|
         bid.id = 12_345
         bid.created_at = Time.now
@@ -23,9 +21,10 @@ module BitexStubs
         bid.status = :executing
         bid.order_book = order_book
         bid.stub(:cancel!) do
-          bid.status = :cancelled
-          BitexStubs.active_bids.delete(bid.id)
-          bid
+          bid.tap do |order|
+            order.status = :cancelled
+            BitexStubs.active_bids.delete(order.id)
+          end
         end
         BitexStubs.bids[bid.id] = bid
         BitexStubs.active_bids[bid.id] = bid
@@ -33,8 +32,6 @@ module BitexStubs
     end
 
     Bitex::Ask.stub(:create!) do |order_book, to_sell, price|
-      order_book.should eq BitexBot::Settings.bitex.order_book
-
       Bitex::Ask.new.tap do |ask|
         ask.id = 12_345
         ask.created_at = Time.now
@@ -44,13 +41,13 @@ module BitexStubs
         ask.status = :executing
         ask.order_book = order_book
         ask.stub(:cancel!) do
-          ask.status = :cancelled
-          BitexStubs.active_asks.delete(ask.id)
-          ask
+          ask.tap do |order|
+            order.status = :cancelled
+            BitexStubs.active_asks.delete(order.id)
+          end
         end
         BitexStubs.asks[ask.id] = ask
         BitexStubs.active_asks[ask.id] = ask
-        ask
       end
     end
   end

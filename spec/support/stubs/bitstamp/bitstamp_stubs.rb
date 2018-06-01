@@ -87,8 +87,8 @@ module BitstampStubs
     ratio = options[:ratio] || 1
     transactions = Bitstamp.orders.all.map { |o| transaction(o, *usd_and_btc(o), ratio) }
     Bitstamp.stub(user_transactions: double(all: transactions))
-
     return unless ratio == 1
+
     stub_bitstamp_trade(:sell)
     stub_bitstamp_trade(:buy)
   end

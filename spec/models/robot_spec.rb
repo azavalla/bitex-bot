@@ -40,7 +40,7 @@ describe BitexBot::Robot do
     stub_bitstamp_empty_user_transactions
   end
 
-  let(:bot) { BitexBot::Robot.new }
+  let(:bot) { subject.class.new }
 
   it 'Starts out by creating opening flows that timeout' do
     stub_bitex_orders
@@ -52,7 +52,7 @@ describe BitexBot::Robot do
     buying = BitexBot::BuyOpeningFlow.last
     selling = BitexBot::SellOpeningFlow.last
 
-    Timecop.travel 10.minutes.from_now
+    Timecop.travel(10.minutes.from_now)
     bot.trade!
 
     buying.reload.should be_settling
@@ -67,132 +67,104 @@ describe BitexBot::Robot do
     Bitex::Trade.stub(all: [])
     bot.trade!
 
-    BitexBot::BuyOpeningFlow.active.count.should == 1
-    Timecop.travel 2.seconds.from_now
+    BitexBot::BuyOpeningFlow.active.count.should eq 1
+    Timecop.travel(2.seconds.from_now)
     bot.trade!
 
-    BitexBot::BuyOpeningFlow.active.count.should == 1
-    Timecop.travel 5.seconds.from_now
+    BitexBot::BuyOpeningFlow.active.count.should eq 1
+    Timecop.travel(5.seconds.from_now)
     bot.trade!
 
-    BitexBot::BuyOpeningFlow.active.count.should == 2
+    BitexBot::BuyOpeningFlow.active.count.should eq 2
 
     # When transactions appear, all opening flows should get old and die.
     # We stub our finder to make it so all orders have been successfully cancelled.
     stub_bitex_transactions
 
-    Timecop.travel 5.seconds.from_now
-    bot.trade!
+    Timecop.travel(5.seconds.from_now)
+    2.times { bot.trade! }
+
+    BitexBot::BuyOpeningFlow.active.count.should eq 1
+    Timecop.travel(5.seconds.from_now)
     bot.trade!
 
-    BitexBot::BuyOpeningFlow.active.count.should == 1
-    Timecop.travel 5.seconds.from_now
-    bot.trade!
-
-    BitexBot::BuyOpeningFlow.active.count.should == 0
+    BitexBot::BuyOpeningFlow.active.count.should be_zero
   end
 
   it 'does not place new opening flows until all closing flows are done' do
     bot.trade!
     stub_bitex_transactions
-    expect do
-      bot.trade!
-    end.to change { BitexBot::BuyClosingFlow.count }.by(1)
 
-    Timecop.travel 15.seconds.from_now
-    bot.trade!
-    bot.trade!
+    expect { bot.trade! }.to change { BitexBot::BuyClosingFlow.count }.by(1)
+
+    Timecop.travel(15.seconds.from_now)
+    2.times { bot.trade! }
+
     bot.should be_active_closing_flows
     bot.should_not be_active_opening_flows
-
     stub_bitstamp_orders_into_transactions
+
     expect do
       bot.trade!
       bot.should_not be_active_closing_flows
     end.to change { BitexBot::BuyOpeningFlow.count }.by(1)
   end
 
-  it 'does not place new opening flows when ordered to hold' do
-    other_bot = BitexBot::Robot.new
-    other_bot.store.hold = true
-    other_bot.store.save!
-    expect do
-      bot.trade!
-    end.not_to change { BitexBot::BuyOpeningFlow.count }
-  end
+  context 'with another bot updating store flags' do
+    let(:other_bot) { subject.class.new }
 
-  it 'stops trading when fiat stop is reached' do
-    other_bot = BitexBot::Robot.new
-    other_bot.store.btc_stop = 30
-    other_bot.store.save!
-    expect do
-      bot.trade!
-    end.not_to change { BitexBot::BuyOpeningFlow.count }
-  end
+    def with_transaction
+      yield
 
-  it 'stops trading when usd stop is reached' do
-    other_bot = BitexBot::Robot.new
-    other_bot.store.btc_stop = 30
-    other_bot.store.save!
-    expect do
-      bot.trade!
-    end.not_to change { BitexBot::BuyOpeningFlow.count }
-  end
+      expect { bot.trade! }.not_to change { BitexBot::BuyOpeningFlow.count }
+    end
 
-  it 'stops trading when btc stop is reached' do
-    other_bot = BitexBot::Robot.new
-    other_bot.store.fiat_stop = 11000
-    other_bot.store.save!
-    expect do
-      bot.trade!
-    end.not_to change { BitexBot::BuyOpeningFlow.count }
-  end
+    it 'does not place new opening flows when ordered to hold' do
+      with_transaction { other_bot.store.update!(hold: true) }
+    end
 
-  it 'warns every 30 minutes when usd warn is reached' do
-    Bitex::Trade.stub(all: [])
-    other_bot = BitexBot::Robot.new
-    other_bot.store.fiat_warning = 11000
-    other_bot.store.save!
-    expect do
-      bot.trade!
-    end.to change { Mail::TestMailer.deliveries.count }.by(1)
-    Timecop.travel 1.minute.from_now
-    stub_bitstamp_order_book # Re-stub so order book does not get old
-    expect do
-      bot.trade!
-    end.not_to change { Mail::TestMailer.deliveries.count }
-    Timecop.travel 31.minutes.from_now
-    stub_bitstamp_order_book # Re-stub so order book does not get old
-    expect do
-      bot.trade!
-    end.to change { Mail::TestMailer.deliveries.count }.by(1)
-  end
+    it 'stops trading when fiat stop is reached' do
+      with_transaction { other_bot.store.update!(btc_stop: 30) }
+    end
 
-  it 'warns every 30 minutes when btc warn is reached' do
-    Bitex::Trade.stub(all: [])
-    other_bot = BitexBot::Robot.new
-    other_bot.store.btc_warning = 30
-    other_bot.store.save!
+    it 'stops trading when btc stop is reached' do
+      with_transaction { other_bot.store.update!(fiat_stop: 11_000) }
+    end
 
-    expect do
-      bot.trade!
-    end.to change { Mail::TestMailer.deliveries.count }.by(1)
+    context 'with empty bitex trades' do
+      before(:each) { Bitex::Trade.stub(all: []) }
 
-    Timecop.travel(1.minute.from_now)
-    stub_bitstamp_order_book # Re-stub so order book does not get old
-    expect do
-      bot.trade!
-    end.not_to change { Mail::TestMailer.deliveries.count }
+      def with_transaction
+        yield
 
-    Timecop.travel(31.minutes.from_now)
-    stub_bitstamp_order_book # Re-stub so order book does not get old
-    expect do
-      bot.trade!
-    end.to change { Mail::TestMailer.deliveries.count }.by(1)
+        expect { bot.trade! }.to change { Mail::TestMailer.deliveries.count }.by(1)
+
+        Timecop.travel(1.minute.from_now)
+        # Re-stub so order book does not get old
+        stub_bitstamp_order_book
+
+        expect { bot.trade! }.not_to change { Mail::TestMailer.deliveries.count }
+
+        Timecop.travel(31.minutes.from_now)
+        # Re-stub so order book does not get old
+        stub_bitstamp_order_book
+
+        expect { bot.trade! }.to change { Mail::TestMailer.deliveries.count }.by(1)
+      end
+
+      it 'warns every 30 minutes when usd warn is reached' do
+        with_transaction { other_bot.store.update(fiat_warning: 11_000) }
+      end
+
+      it 'warns every 30 minutes when btc warn is reached' do
+        with_transaction { other_bot.store.update!(btc_warning: 30) }
+      end
+    end
   end
 
   it 'updates taker_fiat and taker_btc' do
     bot.trade!
+
     bot.store.taker_fiat.should_not be_nil
     bot.store.taker_btc.should_not be_nil
   end
@@ -200,8 +172,6 @@ describe BitexBot::Robot do
   it 'notifies exceptions and sleeps' do
     BitstampApiWrapper.stub(:balance) { raise StandardError.new('oh moova') }
 
-    expect do
-      bot.trade!
-    end.to change { Mail::TestMailer.deliveries.count }.by(1)
+    expect { bot.trade! }.to change { Mail::TestMailer.deliveries.count }.by(1)
   end
 end
