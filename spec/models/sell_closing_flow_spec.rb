@@ -1,6 +1,19 @@
 require 'spec_helper'
 
 describe BitexBot::SellClosingFlow do
+  let(:taker_settings) do
+    BitexBot::SettingsClass.new(
+      bitstamp: {
+        api_key: 'YOUR_API_KEY', secret: 'YOUR_API_SECRET', client_id: 'YOUR_BITSTAMP_USERNAME'
+      }
+    )
+  end
+
+  before(:each) do
+    BitexBot::Settings.stub(taker: taker_settings)
+    BitexBot::Robot.setup
+  end
+
   describe 'closes' do
     before(:each) { stub_bitstamp_trade(:buy) }
 
@@ -50,7 +63,7 @@ describe BitexBot::SellClosingFlow do
   describe 'when there are errors placing the closing order' do
     before(:each) { BitstampApiWrapper.stub(send_order: nil) }
 
-    let(:flow) { subject.class.last }
+    let(:flow) { described_class.last }
 
     it 'keeps trying to place a closed position on bitstamp errors' do
       BitstampApiWrapper.stub(find_lost: nil)
@@ -68,29 +81,21 @@ describe BitexBot::SellClosingFlow do
       flow.close_positions.should be_empty
     end
 
-    let(:amount) { 1_000.to_d }
-    let(:price) { 2_000.to_d }
-    let(:id) { 1_234 }
-    let(:type) { 1 }
-
-    it 'retries until it finds the lost order in the bitstamp' do
-      counter = 0
-      BitstampApiWrapper.stub(:find_lost) do
-        counter += 1
-        next if counter < 3
-        double(amount: amount, price: price, type: type, id: id, datetime: DateTime.now.to_s)
+    it 'retries until it finds the lost order' do
+      BitstampApiWrapper.stub(send_order: nil)
+      BitstampApiWrapper.stub(:orders) do
+        [BitstampApiWrapper::Order.new(1, :buy, 290, 2, 1.minute.ago.to_i)]
       end
-      create(:open_sell)
-      subject.class.close_open_positions
 
-      counter.should eq 3
+      create(:open_sell)
+      described_class.close_open_positions
 
       flow.close_positions.should_not be_empty
       flow.close_positions.first do |position|
-        position.id.should be id
-        position.type.should be type
-        position.amount.should be amount0
-        position.price.should be price
+        position.id.should eq 1_234
+        position.type.should eq 1
+        position.amount.should eq 1_000
+        position.price.should eq 2_000
       end
     end
   end

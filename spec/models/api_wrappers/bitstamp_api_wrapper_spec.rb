@@ -1,10 +1,17 @@
 require 'spec_helper'
 
 describe BitstampApiWrapper do
-  let(:api_wrapper) { subject.class }
+  let(:api_wrapper) { described_class }
+  let(:taker_settings) do
+    BitexBot::SettingsClass.new(
+      bitstamp: {
+        api_key: 'YOUR_API_KEY', secret: 'YOUR_API_SECRET', client_id: 'YOUR_BITSTAMP_USERNAME'
+      }
+    )
+  end
 
   before(:each) do
-    BitexBot::Robot.stub(taker: api_wrapper)
+    BitexBot::Settings.stub(taker: taker_settings)
     BitexBot::Robot.setup
   end
 
@@ -52,7 +59,6 @@ describe BitstampApiWrapper do
     stub_bitstamp_order_book
 
     order_book = api_wrapper.order_book
-
     order_book.should be_a(ApiWrapper::OrderBook)
     order_book.members.should contain_exactly(*%i[timestamp asks bids])
 
@@ -90,6 +96,7 @@ describe BitstampApiWrapper do
       Bitstamp.orders.stub(:buy) { raise OrderNotFound }
 
       expect { api_wrapper.place_order(:buy, 10, 100) }.to raise_exception(OrderNotFound)
+      expect { api_wrapper.place_order(:buy, 10, 100) }.to raise_exception(OrderNotFound)
     end
   end
 
@@ -118,5 +125,11 @@ describe BitstampApiWrapper do
     user_transaction.fee.should be_a(BigDecimal)
     user_transaction.type.should be_a(Integer)
     user_transaction.timestamp.should be_a(Integer)
+  end
+
+  it '#find_lost' do
+    stub_bitstamp_orders
+
+    api_wrapper.orders.all? { |o| api_wrapper.find_lost(o.type, o.price, o.amount).present? }
   end
 end

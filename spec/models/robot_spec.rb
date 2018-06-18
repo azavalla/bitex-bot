@@ -1,9 +1,17 @@
 require 'spec_helper'
 
 describe BitexBot::Robot do
-  before(:each) do
-    Bitex.api_key = 'valid_key'
+  let(:taker_settings) do
+    BitexBot::SettingsClass.new(
+      bitstamp: {
+        api_key: 'YOUR_API_KEY', secret: 'YOUR_API_SECRET', client_id: 'YOUR_BITSTAMP_USERNAME'
+      }
+    )
+  end
 
+  before(:each) do
+    BitexBot::Settings.stub(taker: taker_settings)
+    BitexBot::Robot.setup
     BitexBot::Settings.stub(
       time_to_live: 10,
       buying: double(amount_to_spend_per_order: 50, profit: 0),
@@ -40,7 +48,7 @@ describe BitexBot::Robot do
     stub_bitstamp_empty_user_transactions
   end
 
-  let(:bot) { subject.class.new }
+  let(:bot) { described_class.new }
 
   it 'Starts out by creating opening flows that timeout' do
     stub_bitex_orders

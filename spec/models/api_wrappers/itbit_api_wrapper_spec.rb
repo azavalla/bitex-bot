@@ -1,10 +1,17 @@
 require 'spec_helper'
 
 describe ItbitApiWrapper do
-  let(:api_wrapper) { subject.class }
+  let(:api_wrapper) { described_class }
+  let(:taker_settings) do
+    BitexBot::SettingsClass.new(
+      itbit: {
+        client_key: 'client-key', secret: 'secret', user_id: 'user-id',  default_wallet_id: 'wallet-000', sandbox: false
+      }
+    )
+  end
 
   before(:each) do
-    BitexBot::Robot.stub(taker: api_wrapper)
+    BitexBot::Settings.stub(taker: taker_settings)
     BitexBot::Robot.setup
   end
 
@@ -100,5 +107,11 @@ describe ItbitApiWrapper do
   it '#user_transaction' do
     api_wrapper.user_transactions.should be_a(Array)
     api_wrapper.user_transactions.empty?.should be_truthy
+  end
+
+  it '#find_lost' do
+    stub_itbit_orders
+
+    api_wrapper.orders.all? { |o| api_wrapper.find_lost(o.type, o.price, o.amount).present? }
   end
 end

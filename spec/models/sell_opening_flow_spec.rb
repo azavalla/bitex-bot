@@ -33,7 +33,7 @@ describe BitexBot::SellOpeningFlow do
       it 'order has expected order book' do
         order = subject.class.order_class.find(flow.order_id)
 
-        order.order_book.should eq BitexBot::Settings.bitex.order_book
+        order.order_book.should eq BitexBot::Settings.maker_settings.order_book
       end
 
       it 'sells 2 btc' do
@@ -184,5 +184,33 @@ describe BitexBot::SellOpeningFlow do
     it 'does not register buys from unknown bids' do
       expect { subject.class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenSell.count }
     end
+  end
+
+  it 'cancels the associated bitex bid' do
+    stub_bitex_orders
+    BitexBot::Settings.stub(time_to_live: 3,
+      selling: double(quantity_to_sell_per_order: 4, profit: 50))
+
+    flow = BitexBot::SellOpeningFlow.create_for_market(1000,
+      bitstamp_api_wrapper_order_book.asks, bitstamp_api_wrapper_transactions_stub, 0.5, 0.25,
+      store)
+
+    flow.finalise!
+    flow.should be_settling
+    flow.finalise!
+    flow.should be_finalised
+  end
+
+  it 'order has expected order book' do
+    stub_bitex_orders
+    BitexBot::Settings.stub(time_to_live: 3,
+      selling: double(quantity_to_sell_per_order: 2, profit: 0))
+
+    flow = subject.class.create_for_market(1000,
+      bitstamp_api_wrapper_order_book.asks, bitstamp_api_wrapper_transactions_stub, 0.5, 0.25,
+      store)
+
+    order = subject.class.order_class.find(flow.order_id)
+    order.order_book.should eq BitexBot::Settings.maker_settings.order_book
   end
 end

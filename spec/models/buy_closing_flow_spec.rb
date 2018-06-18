@@ -1,10 +1,23 @@
 require 'spec_helper'
 
 describe BitexBot::BuyClosingFlow do
+  let(:taker_settings) do
+    BitexBot::SettingsClass.new(
+      bitstamp: {
+        api_key: 'YOUR_API_KEY', secret: 'YOUR_API_SECRET', client_id: 'YOUR_BITSTAMP_USERNAME'
+      }
+    )
+  end
+
+  before(:each) do
+    BitexBot::Settings.stub(taker: taker_settings)
+    BitexBot::Robot.setup
+  end
+
   describe 'closes' do
     before(:each) { stub_bitstamp_trade(:sell) }
 
-    let(:flow) { subject.class.last }
+    let(:flow) { described_class.last }
     let(:close) { flow.close_positions.first }
     let(:order_id) { '1' }
 
@@ -20,6 +33,7 @@ describe BitexBot::BuyClosingFlow do
       flow.amount.should eq 600
       flow.btc_profit.should be_nil
       flow.fiat_profit.should be_nil
+
       close.order_id.should eq order_id
       close.amount.should be_nil
       close.quantity.should be_nil
@@ -43,6 +57,50 @@ describe BitexBot::BuyClosingFlow do
       close.order_id.should eq order_id
       close.amount.should be_nil
       close.quantity.should be_nil
+    end
+  end
+
+  describe 'when there are errors placing the closing order' do
+    before(:each) { BitstampApiWrapper.stub(send_order: nil) }
+
+    let(:flow) { described_class.last }
+
+    it 'keeps trying to place a closed position on bitstamp errors' do
+      BitstampApiWrapper.stub(send_order: nil)
+      BitstampApiWrapper.stub(find_lost: nil)
+
+      open = create :open_buy
+      expect do
+        subject.class.close_open_positions
+      end.to raise_exception(OrderNotFound)
+      flow = subject.class.last
+
+      open.reload.closing_flow.should eq flow
+
+      flow.open_positions.should eq [open]
+      flow.desired_price.should eq 310
+      flow.quantity.should eq 2
+      flow.btc_profit.should be_nil
+      flow.fiat_profit.should be_nil
+      flow.close_positions.should be_empty
+    end
+
+    it 'retries until it finds the lost order' do
+      BitstampApiWrapper.stub(send_order: nil)
+      BitstampApiWrapper.stub(:orders) do
+        [BitstampApiWrapper::Order.new(1, :sell, 310, 2.5, 1.minute.ago.to_i)]
+      end
+
+      open = create(:open_buy)
+      described_class.close_open_positions
+
+      flow.close_positions.should_not be_empty
+      flow.close_positions.first do |position|
+        position.id.should eq 1234
+        position.type.should eq 1
+        position.amount.should eq 1000
+        position.price.should eq 2000
+      end
     end
   end
 
@@ -184,52 +242,6 @@ describe BitexBot::BuyClosingFlow do
       flow.reload.should be_done
       flow.btc_profit.should be_zero
       flow.fiat_profit.should == -34.165
-    end
-  end
-
-  describe 'when there are errors placing the closing order' do
-    it 'keeps trying to place a closed position on bitstamp errors' do
-      BitstampApiWrapper.stub(send_order: nil)
-      BitstampApiWrapper.stub(find_lost: nil)
-
-      open = create :open_buy
-      expect do
-        subject.class.close_open_positions
-      end.to raise_exception(OrderNotFound)
-      flow = subject.class.last
-
-      open.reload.closing_flow.should eq flow
-
-      flow.open_positions.should eq [open]
-      flow.desired_price.should eq 310
-      flow.quantity.should eq 2
-      flow.btc_profit.should be_nil
-      flow.fiat_profit.should be_nil
-      flow.close_positions.should be_empty
-    end
-
-    it 'retries until it finds the lost order in the bitstamp' do
-      BitstampApiWrapper.stub(send_order: nil)
-      counter = 0
-
-      BitstampApiWrapper.stub(:find_lost) do
-        counter += 1
-        next if counter < 3
-        double(amount: 1000, price: 2000, type: 1, id: 1234, datetime: DateTime.now.to_s)
-      end
-
-      open = create :open_buy
-      subject.class.close_open_positions
-      flow = subject.class.last
-
-      flow.close_positions.should_not be_empty
-      flow.close_positions.first do |position|
-        position.id.should be 1234
-        position.type.should be 1
-        position.amount.should be 1000
-        position.price.should be 2000
-      end
-      counter.should eq 3
     end
   end
 end
