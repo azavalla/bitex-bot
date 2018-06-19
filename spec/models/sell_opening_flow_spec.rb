@@ -23,9 +23,7 @@ describe BitexBot::SellOpeningFlow do
       stub_bitex_active_orders
     end
 
-    let(:flow) do
-      describe_class.create_for_market(usd_balance, order_book.asks, transactions, maker_fee, taker_fee, store)
-    end
+    let(:flow) { described_class.create_for_market(usd_balance, order_book.asks, transactions, maker_fee, taker_fee, store) }
 
     context 'with USD balance 1000' do
       let(:usd_balance) { 1_000.to_d }
@@ -95,7 +93,7 @@ describe BitexBot::SellOpeningFlow do
 
         expect do
           flow.should be_nil
-          subject.class.count.should be_zero
+          described_class.count.should be_zero
         end.to raise_exception(BitexBot::CannotCreateFlow, 'Cannot Create')
       end
 
@@ -129,7 +127,7 @@ describe BitexBot::SellOpeningFlow do
 
         expect do
           flow.should be_nil
-          subject.class.count.should be_zero
+          described_class.count.should be_zero
         end.to raise_exception(BitexBot::CannotCreateFlow, 'Needed 100.7518796992481203 but you only have 1.0')
       end
     end
@@ -161,7 +159,7 @@ describe BitexBot::SellOpeningFlow do
 
     it 'does not register the same buy twice' do
       flow.order_id.should eq order_id
-      subject.class.sync_open_positions
+      described_class.sync_open_positions
 
       BitexBot::OpenSell.count.should eq 1
 
@@ -177,7 +175,7 @@ describe BitexBot::SellOpeningFlow do
     it 'does not register buys from another order book' do
       Bitex::Trade.stub(all: [build(:bitex_sell, id: other_trade_id, order_book: :btc_ars)])
 
-      expect { subject.class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenSell.count }
+      expect { described_class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenSell.count }
       BitexBot::OpenSell.count.should be_zero
     end
 

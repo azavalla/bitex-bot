@@ -119,7 +119,7 @@ describe BitexBot::Robot do
   end
 
   context 'with another bot updating store flags' do
-    let(:other_bot) { subject.class.new }
+    let(:other_bot) { described_class.new }
 
     def with_transaction
       yield
@@ -178,7 +178,7 @@ describe BitexBot::Robot do
   end
 
   it 'notifies exceptions and sleeps' do
-    BitstampApiWrapper.any_instance.stub(:balance) { raise StandardError.new('oh moova') }
+    described_class.taker.stub(:balance) { raise StandardError.new('oh moova') }
 
     expect { bot.trade! }.to change { Mail::TestMailer.deliveries.count }.by(1)
   end

@@ -97,7 +97,7 @@ describe BitexBot::BuyOpeningFlow do
 
         expect do
           flow.should be_nil
-          subject.class.count.should be_zero
+          described_class.count.should be_zero
         end.to raise_exception(BitexBot::CannotCreateFlow, 'Cannot Create')
       end
 
@@ -134,7 +134,7 @@ describe BitexBot::BuyOpeningFlow do
 
         expect do
           flow.should be_nil
-          subject.class.count.should be_zero
+          described_class.count.should be_zero
         end.to raise_exception(BitexBot::CannotCreateFlow, 'Needed 6.716791979949874686733333333333333333 but you only have 1.0')
       end
     end
@@ -164,7 +164,7 @@ describe BitexBot::BuyOpeningFlow do
 
     it 'does not register the same buy twice' do
       flow.order_id.should eq order_id
-      subject.class.sync_open_positions
+      described_class.sync_open_positions
 
       BitexBot::OpenBuy.count.should eq 1
 

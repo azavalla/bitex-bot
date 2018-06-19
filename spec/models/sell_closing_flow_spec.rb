@@ -17,13 +17,13 @@ describe BitexBot::SellClosingFlow do
   describe 'closes' do
     before(:each) { stub_bitstamp_trade(:buy) }
 
-    let(:flow) { subject.class.last }
+    let(:flow) { described_class.last }
     let(:close) { flow.close_positions.first }
     let(:order_id) { '1' }
 
     it 'a single open position completely' do
       open = create(:open_sell)
-      subject.class.close_open_positions
+      described_class.close_open_positions
 
       open.reload.closing_flow.should eq flow
 
@@ -42,7 +42,7 @@ describe BitexBot::SellClosingFlow do
     it 'an aggregate of several open positions' do
       open_one = create(:tiny_open_sell)
       open_two = create(:open_sell)
-      subject.class.close_open_positions
+      described_class.close_open_positions
 
       open_one.reload.closing_flow.should eq flow
       open_two.reload.closing_flow.should eq flow
@@ -61,15 +61,17 @@ describe BitexBot::SellClosingFlow do
   end
 
   describe 'when there are errors placing the closing order' do
-    before(:each) { BitstampApiWrapper.stub(send_order: nil) }
+    before(:each) do
+      BitexBot::Robot.taker.stub(send_order: nil)
+    end
 
     let(:flow) { described_class.last }
 
     it 'keeps trying to place a closed position on bitstamp errors' do
-      BitstampApiWrapper.stub(find_lost: nil)
+      BitexBot::Robot.taker.stub(find_lost: nil)
       open = create(:open_sell)
 
-      expect { subject.class.close_open_positions }.to raise_exception(OrderNotFound)
+      expect { described_class.close_open_positions }.to raise_exception(OrderNotFound)
 
       open.reload.closing_flow.should eq flow
 
@@ -103,11 +105,11 @@ describe BitexBot::SellClosingFlow do
   it 'does not try to close if the amount is too low' do
     create(:tiny_open_sell)
 
-    expect { subject.class.close_open_positions.should be_nil }.not_to change{ subject.class.count }
+    expect { described_class.close_open_positions.should be_nil }.not_to change{ described_class.count }
   end
 
   it 'does not try to close if there are no open positions' do
-    expect { subject.class.close_open_positions.should be_nil }.not_to change{ subject.class.count }
+    expect { described_class.close_open_positions.should be_nil }.not_to change{ described_class.count }
   end
 
   describe 'when syncinc executed orders' do
@@ -118,11 +120,11 @@ describe BitexBot::SellClosingFlow do
       create(:open_sell)
     end
 
-    let(:flow) { subject.class.last }
+    let(:flow) { described_class.last }
     let(:close) { flow.close_positions.last  }
 
     it 'syncs the executed orders, calculates profit' do
-      subject.class.close_open_positions
+      described_class.close_open_positions
       stub_bitstamp_orders_into_transactions
 
       flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
@@ -141,7 +143,7 @@ describe BitexBot::SellClosingFlow do
 
       before(:each) do
         BitexBot::Settings.stub(fx_rate: fx_rate)
-        subject.class.close_open_positions
+        described_class.close_open_positions
 
         stub_bitstamp_orders_into_transactions
         flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
@@ -155,7 +157,7 @@ describe BitexBot::SellClosingFlow do
     end
 
     it 'retries closing at a higher price every minute' do
-      subject.class.close_open_positions
+      described_class.close_open_positions
 
       expect do
         flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
@@ -203,7 +205,7 @@ describe BitexBot::SellClosingFlow do
     end
 
     it 'does not retry for an amount less than minimum_for_closing' do
-      subject.class.close_open_positions
+      described_class.close_open_positions
 
       20.times do
         Timecop.travel(60.seconds.from_now)
@@ -225,7 +227,7 @@ describe BitexBot::SellClosingFlow do
     it 'can lose BTC if price had to be raised dramatically' do
       # This flow is forced to spend the original USD amount paying more than expected, thus regaining less BTC than what was
       # sold on bitex.
-      subject.class.close_open_positions
+      described_class.close_open_positions
 
       60.times do
         Timecop.travel(60.seconds.from_now)
