@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe ItbitApiWrapper do
+describe BitexBot::Api::Itbit do
   let(:taker_settings) do
     BitexBot::SettingsClass.new(
       itbit: {
@@ -53,9 +53,9 @@ describe ItbitApiWrapper do
     stub_balance
 
     balance = api_wrapper.balance
-    balance.should be_a(ApiWrapper::BalanceSummary)
-    balance.btc.should be_a(ApiWrapper::Balance)
-    balance.usd.should be_a(ApiWrapper::Balance)
+    balance.should be_a(BitexBot::Api::BalanceSummary)
+    balance.btc.should be_a(BitexBot::Api::Balance)
+    balance.usd.should be_a(BitexBot::Api::Balance)
 
     btc = balance.btc
     btc.total.should be_a(BigDecimal)
@@ -89,9 +89,9 @@ describe ItbitApiWrapper do
     stub_order_book
 
     order_book = api_wrapper.order_book
-    order_book.should be_a(ApiWrapper::OrderBook)
-    order_book.bids.all? { |bid| bid.should be_a(ApiWrapper::OrderSummary) }
-    order_book.asks.all? { |ask| ask.should be_a(ApiWrapper::OrderSummary) }
+    order_book.should be_a(BitexBot::Api::OrderBook)
+    order_book.bids.all? { |bid| bid.should be_a(BitexBot::Api::OrderSummary) }
+    order_book.asks.all? { |ask| ask.should be_a(BitexBot::Api::OrderSummary) }
     order_book.timestamp.should be_a(Integer)
 
     bid = order_book.bids.sample
@@ -129,7 +129,7 @@ describe ItbitApiWrapper do
   it '#orders' do
     stub_orders
 
-    api_wrapper.orders.all? { |o| o.should be_a(ApiWrapper::Order) }
+    api_wrapper.orders.all? { |o| o.should be_a(BitexBot::Api::Order) }
 
     order = api_wrapper.orders.sample
     order.id.should be_a(String)
@@ -155,7 +155,7 @@ describe ItbitApiWrapper do
   it '#transactions' do
     stub_transactions
 
-    api_wrapper.transactions.all? { |o| o.should be_a(ApiWrapper::Transaction) }
+    api_wrapper.transactions.all? { |o| o.should be_a(BitexBot::Api::Transaction) }
 
     transaction = api_wrapper.transactions.sample
     transaction.id.should be_a(Integer)
