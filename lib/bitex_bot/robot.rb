@@ -160,8 +160,8 @@ module BitexBot
     end
 
     def sync_closing_flows
-      orders = with_cooldown { Robot.taker.orders }
-      transactions = with_cooldown { Robot.taker.user_transactions }
+      orders = with_cooldown { taker.orders }
+      transactions = with_cooldown { taker.user_transactions }
 
       [BuyClosingFlow, SellClosingFlow].each do |kind|
         kind.active.each { |flow| flow.sync_closed_positions(orders, transactions) }
@@ -177,7 +177,7 @@ module BitexBot
       recent_buying, recent_selling = recent_operations
       return log(:debug, 'Not placing new orders, recent ones exist.') if [recent_buying, recent_selling].all?(&:present?)
 
-      taker_balance = with_cooldown { Robot.taker.balance }
+      taker_balance = with_cooldown { taker.balance }
       profile = maker.profile
       total_fiat, total_btc = balances(taker_balance, profile)
 
@@ -186,8 +186,8 @@ module BitexBot
       return log(:debug, "Not placing new orders, #{Settings.quote} target not met") if target_met?(:fiat, total_fiat)
       return log(:debug, 'Not placing new orders, BTC target not met') if target_met?(:btc, total_btc)
 
-      order_book = with_cooldown { Robot.taker.order_book }
-      transactions = with_cooldown { Robot.taker.transactions }
+      order_book = with_cooldown { taker.order_book }
+      transactions = with_cooldown { taker.transactions }
 
       create_buy_opening_flow(taker_balance, order_book, transactions, profile) if recent_buying.nil?
       create_sell_opening_flow(taker_balance, order_book, transactions, profile) if recent_selling.nil?
