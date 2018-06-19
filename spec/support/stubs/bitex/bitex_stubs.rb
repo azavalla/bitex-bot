@@ -5,23 +5,22 @@ module BitexStubs
   mattr_accessor(:active_asks) { {} }
 
   def stub_bitex_active_orders
-    Bitex::Order.stub(:all) { BitexStubs.active_bids + BitexStubs.active_asks }
-   #Bitex::Order.stub(all: BitexStubs.active_bids.merge(BitexStubs.active_asks))
+    Bitex::Order.stub(:all) { active_bids.merge(active_asks) }
 
-    Bitex::Bid.stub(:find) { |id| BitexStubs.bids[id] }
+    Bitex::Bid.stub(:find) { |id| bids[id] }
 
-    Bitex::Ask.stub(:find) { |id| BitexStubs.asks[id] }
+    Bitex::Ask.stub(:find) { |id| asks[id] }
 
     Bitex::Bid.stub(:create!) do |order_book, to_spend, price|
       build(:bitex_bid, id: 12_345, order_book: order_book, status: :executing, amount: to_spend, remaining_amount: to_spend, price: price).tap do |bid|
         bid.stub(:cancel!) do
           bid.tap do
             bid.status = :cancelled
-            BitexStubs.active_bids.delete(bid.id)
+            active_bids.delete(bid.id)
           end
         end
-        BitexStubs.bids[bid.id] = bid
-        BitexStubs.active_bids[bid.id] = bid
+        bids[bid.id] = bid
+        active_bids[bid.id] = bid
       end
     end
 
@@ -30,11 +29,11 @@ module BitexStubs
         ask.stub(:cancel!) do
           ask.tap do
             ask.status = :cancelled
-            BitexStubs.active_asks.delete(ask.id)
+            active_asks.delete(ask.id)
           end
         end
-        BitexStubs.asks[ask.id] = ask
-        BitexStubs.active_asks[ask.id] = ask
+        asks[ask.id] = ask
+        active_asks[ask.id] = ask
       end
     end
   end
