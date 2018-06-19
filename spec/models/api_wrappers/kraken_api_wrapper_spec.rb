@@ -1,8 +1,6 @@
 require 'spec_helper'
 
 describe KrakenApiWrapper do
-  let(:api_wrapper) { described_class }
-  let(:api_client) { api_wrapper.client }
   let(:taker_settings) do
     BitexBot::SettingsClass.new(
       kraken: {
@@ -15,6 +13,9 @@ describe KrakenApiWrapper do
     BitexBot::Settings.stub(taker: taker_settings)
     BitexBot::Robot.setup
   end
+
+  let(:api_wrapper) { BitexBot::Robot.taker }
+  let(:api_client) { api_wrapper.client }
 
   it 'Sends User-Agent header' do
     stub_stuff =
@@ -70,6 +71,8 @@ describe KrakenApiWrapper do
     order_book.members.should contain_exactly(*%i[timestamp asks bids])
 
     order_book.timestamp.should be_a(Integer)
+    order_boook.asks.should be_an(Array)
+    order_boook.bids.should be_an(Array)
 
     bid = order_book.bids.sample
     bid.should be_a(ApiWrapper::OrderSummary)
@@ -90,13 +93,13 @@ describe KrakenApiWrapper do
 
     order = api_wrapper.orders.sample
     order.should be_a(ApiWrapper::Order)
-    order.members.should contain_exactly(*%i[id type price amount timestamp raw_order])
+    order.members.should contain_exactly(*%i[id type price amount timestamp raw])
     order.id.should be_a(String)
     order.type.should be_a(Symbol)
     order.price.should be_a(BigDecimal)
     order.amount.should be_a(BigDecimal)
     order.timestamp.should be_a(Integer)
-    order.raw_order.should be_present
+    order.raw.should be_present
   end
 
   it '#transactions' do
@@ -105,11 +108,12 @@ describe KrakenApiWrapper do
 
     transaction = api_wrapper.transactions.sample
     transaction.should be_a(ApiWrapper::Transaction)
-    transaction.members.should contain_exactly(*%i[id price amount timestamp])
+    transaction.members.should contain_exactly(*%i[id price amount timestamp raw])
     transaction.id.should be_a(Integer)
     transaction.price.should be_a(BigDecimal)
     transaction.amount.should be_a(BigDecimal)
     transaction.timestamp.should be_a(Integer)
+    transaction.raw.should be_present
   end
 
   it '#user_transaction' do
@@ -121,6 +125,6 @@ describe KrakenApiWrapper do
     stub_kraken_private_client
     stub_kraken_orders
 
-    described_class.orders.all? { |o| described_class.find_lost(o.type, o.price, o.amount).present? }
+    api_wrapper.orders.all? { |o| api_wrapper.find_lost(o.type, o.price, o.amount).present? }
   end
 end

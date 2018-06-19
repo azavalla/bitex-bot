@@ -93,8 +93,7 @@ module BitexBot
     #   #open_position_class => [Sell: OpenSell | Buy: OpenBuy]
     def self.sync_open_positions
       threshold = open_position_class.order('created_at DESC').first.try(:created_at)
-
-      Bitex::Trade.all.map do |transaction|
+      Robot.maker.transactions.map do |transaction|
         next unless sought_transaction?(threshold, transaction)
 
         flow = find_by_order_id(transaction_order_id(transaction))
@@ -108,14 +107,14 @@ module BitexBot
     def self.create_open_position!(transaction, flow)
       Robot.log(
         :info,
-        "Opening: #{name} ##{flow.id} was hit for #{transaction.quantity} #{Settings.base.upcase} @ #{Settings.quote.upcase}"\
+        "Opening: #{name} ##{flow.id} was hit for #{transaction.raw.quantity} #{Settings.base.upcase} @ #{Settings.quote.upcase}"\
         " #{transaction.price}"
       )
       open_position_class.create!(
         transaction_id: transaction.id,
         price: transaction.price,
         amount: transaction.amount,
-        quantity: transaction.quantity,
+        quantity: transaction.raw.quantity,
         opening_flow: flow
       )
     end
@@ -130,11 +129,11 @@ module BitexBot
     end
 
     def self.fit_operation_kind?(transaction)
-      transaction.is_a?(transaction_class)
+      transaction.raw.is_a?(transaction_class)
     end
 
     def self.expired_transaction?(transaction, threshold)
-      threshold.present? && transaction.created_at < (threshold - 30.minutes)
+      threshold.present? && transaction.timestamp < (threshold - 30.minutes).to_i
     end
 
     def self.open_position?(transaction)
@@ -142,7 +141,11 @@ module BitexBot
     end
 
     def self.expected_order_book?(transaction)
-      transaction.order_book == Settings.maker_settings.order_book
+      transaction.raw.order_book == Settings.maker_settings.order_book
+    end
+
+    def self.open_position?(transaction)
+      open_position_class.find_by_transaction_id(transaction.id)
     end
     # end: sync_open_positions helpers
 

@@ -39,7 +39,7 @@ describe BitexBot::Robot do
       }
     )
 
-    stub_bitex_orders
+    stub_bitex_active_orders
     stub_bitstamp_trade(:sell)
     stub_bitstamp_trade(:buy)
     stub_bitstamp_api_wrapper_balance
@@ -51,7 +51,7 @@ describe BitexBot::Robot do
   let(:bot) { described_class.new }
 
   it 'Starts out by creating opening flows that timeout' do
-    stub_bitex_orders
+    stub_bitex_active_orders
     stub_bitstamp_api_wrapper_order_book
 
     bot.trade!
@@ -178,7 +178,7 @@ describe BitexBot::Robot do
   end
 
   it 'notifies exceptions and sleeps' do
-    BitstampApiWrapper.stub(:balance) { raise StandardError.new('oh moova') }
+    BitstampApiWrapper.any_instance.stub(:balance) { raise StandardError.new('oh moova') }
 
     expect { bot.trade! }.to change { Mail::TestMailer.deliveries.count }.by(1)
   end

@@ -5,9 +5,9 @@ describe BitexBot::BuyOpeningFlow do
   it { should validate_presence_of :price }
   it { should validate_presence_of :value_to_use }
   it { should validate_presence_of :order_id }
-  it { should(validate_inclusion_of(:status).in_array(subject.class.statuses)) }
+  it { should(validate_inclusion_of(:status).in_array(described_class.statuses)) }
 
-  before(:each) { Bitex.api_key = 'valid_key' }
+  before(:each) { BitexBot::Robot.setup }
 
   let(:order_id) { 12_345 }
   let(:time_to_live) { 3 }
@@ -20,18 +20,18 @@ describe BitexBot::BuyOpeningFlow do
   describe 'when creating a buying flow' do
     before(:each) do
       BitexBot::Settings.stub(time_to_live: time_to_live)
-      stub_bitex_orders
+      stub_bitex_active_orders
     end
 
     let(:flow) do
-      subject.class.create_for_market(btc_balance, order_book.bids, transactions, maker_fee, taker_fee, store)
+      described_class.create_for_market(btc_balance, order_book.bids, transactions, maker_fee, taker_fee, store)
     end
 
     context 'with BTC balance 100' do
       let(:btc_balance) { 100.to_d }
 
       it 'order has expected order book' do
-        order = subject.class.order_class.find(flow.order_id)
+        order = described_class.order_class.find(flow.order_id)
 
         order.order_book.should eq BitexBot::Settings.maker_settings.order_book
       end
@@ -144,7 +144,7 @@ describe BitexBot::BuyOpeningFlow do
     before(:each) { stub_bitex_transactions }
 
     let(:flow) { create(:buy_opening_flow) }
-    let(:trades) { subject.class.sync_open_positions }
+    let(:trades) { described_class.sync_open_positions }
     let(:trade_id) { 12_345_678 }
 
     it 'only gets buys' do
@@ -181,6 +181,7 @@ describe BitexBot::BuyOpeningFlow do
     it 'does not register buys from another order book' do
       Bitex::Trade.stub(all: [build(:bitex_buy, id: 23_456, order_book: :btc_ars)])
 
+      flow.order_id.should == 12345
       expect do
         described_class.sync_open_positions.should be_empty
       end.not_to change { BitexBot::OpenBuy.count }
@@ -188,37 +189,7 @@ describe BitexBot::BuyOpeningFlow do
     end
 
     it 'does not register buys from unknown bids' do
-      expect do
-        subject.class.sync_open_positions.should be_empty
-      end.not_to change { BitexBot::OpenBuy.count }
+      expect { described_class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenBuy.count }
     end
-  end
-
-  it 'cancels the associated bitex bid' do
-    stub_bitex_orders
-    BitexBot::Settings.stub(time_to_live: 3,
-      buying: double(amount_to_spend_per_order: 50, profit: 0))
-
-    flow = BitexBot::BuyOpeningFlow.create_for_market(100,
-      bitstamp_api_wrapper_order_book.bids, bitstamp_api_wrapper_transactions_stub, 0.5, 0.25,
-      store)
-
-    flow.finalise!
-    flow.should be_settling
-    flow.finalise!
-    flow.should be_finalised
-  end
-
-  it 'order has expected order book' do
-    stub_bitex_orders
-    BitexBot::Settings.stub(time_to_live: 3,
-      buying: double(amount_to_spend_per_order: 50, profit: 0))
-
-    flow = subject.class.create_for_market(100,
-      bitstamp_api_wrapper_order_book.bids, bitstamp_api_wrapper_transactions_stub, 0.5, 0.25,
-      store)
-
-    order = subject.class.order_class.find(flow.order_id)
-    order.order_book.should eq BitexBot::Settings.maker_settings.order_book
   end
 end

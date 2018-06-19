@@ -5,9 +5,9 @@ describe BitexBot::SellOpeningFlow do
   it { should validate_presence_of :price }
   it { should validate_presence_of :value_to_use }
   it { should validate_presence_of :order_id }
-  it { should(validate_inclusion_of(:status).in_array(subject.class.statuses)) }
+  it { should(validate_inclusion_of(:status).in_array(described_class.statuses)) }
 
-  before(:each) { Bitex.api_key = 'valid_key' }
+  before(:each) { BitexBot::Robot.setup }
 
   let(:order_id) { 12_345 }
   let(:time_to_live) { 3 }
@@ -20,18 +20,18 @@ describe BitexBot::SellOpeningFlow do
   describe 'when creating a selling flow' do
     before(:each) do
       BitexBot::Settings.stub(time_to_live: time_to_live)
-      stub_bitex_orders
+      stub_bitex_active_orders
     end
 
     let(:flow) do
-      subject.class.create_for_market(usd_balance, order_book.asks, transactions, maker_fee, taker_fee, store)
+      describe_class.create_for_market(usd_balance, order_book.asks, transactions, maker_fee, taker_fee, store)
     end
 
     context 'with USD balance 1000' do
       let(:usd_balance) { 1_000.to_d }
 
       it 'order has expected order book' do
-        order = subject.class.order_class.find(flow.order_id)
+        order = described_class.order_class.find(flow.order_id)
 
         order.order_book.should eq BitexBot::Settings.maker_settings.order_book
       end
@@ -139,7 +139,7 @@ describe BitexBot::SellOpeningFlow do
     before(:each) { stub_bitex_transactions }
 
     let(:flow) { create(:sell_opening_flow) }
-    let(:trades) { subject.class.sync_open_positions }
+    let(:trades) { described_class.sync_open_positions }
     let(:trade_id) { 12_345_678 }
     let(:other_trade_id) { 23_456 }
 
@@ -182,35 +182,7 @@ describe BitexBot::SellOpeningFlow do
     end
 
     it 'does not register buys from unknown bids' do
-      expect { subject.class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenSell.count }
+      expect { described_class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenSell.count }
     end
-  end
-
-  it 'cancels the associated bitex bid' do
-    stub_bitex_orders
-    BitexBot::Settings.stub(time_to_live: 3,
-      selling: double(quantity_to_sell_per_order: 4, profit: 50))
-
-    flow = BitexBot::SellOpeningFlow.create_for_market(1000,
-      bitstamp_api_wrapper_order_book.asks, bitstamp_api_wrapper_transactions_stub, 0.5, 0.25,
-      store)
-
-    flow.finalise!
-    flow.should be_settling
-    flow.finalise!
-    flow.should be_finalised
-  end
-
-  it 'order has expected order book' do
-    stub_bitex_orders
-    BitexBot::Settings.stub(time_to_live: 3,
-      selling: double(quantity_to_sell_per_order: 2, profit: 0))
-
-    flow = subject.class.create_for_market(1000,
-      bitstamp_api_wrapper_order_book.asks, bitstamp_api_wrapper_transactions_stub, 0.5, 0.25,
-      store)
-
-    order = subject.class.order_class.find(flow.order_id)
-    order.order_book.should eq BitexBot::Settings.maker_settings.order_book
   end
 end
