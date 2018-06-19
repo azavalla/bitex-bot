@@ -17,8 +17,9 @@ require 'itbit'
 # BitexBot Models
 require 'bitex_bot/settings'
 require 'bitex_bot/database'
-require 'bitex_bot/models/apis/api_wrapper.rb'
-Dir[File.dirname(__FILE__) + '/bitex_bot/models/apis/**/*.rb'].each { |file| require file }
+require 'bitex_bot/api.rb'
+require 'bitex_bot/api/api_wrapper.rb'
+Dir[File.dirname(__FILE__) + '/bitex_bot/api/**/*.rb'].each { |file| require file }
 require 'bitex_bot/models/opening_flow.rb'
 require 'bitex_bot/models/closing_flow.rb'
 Dir[File.dirname(__FILE__) + '/bitex_bot/models/*.rb'].each { |file| require file }
