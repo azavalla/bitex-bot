@@ -153,3 +153,5 @@ module BitstampStubs
     }
   end
 end
+
+RSpec.configuration.include BitstampStubs

@@ -72,3 +72,5 @@ module ItbitStubs
     Itbit.stub(:default_wallet_id) { 'wallet-000' }
   end
 end
+
+RSpec.configuration.include ItbitStubs

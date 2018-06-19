@@ -97,3 +97,5 @@ module KrakenStubs
     KrakenApiWrapper.client
   end
 end
+
+RSpec.configuration.include KrakenStubs
