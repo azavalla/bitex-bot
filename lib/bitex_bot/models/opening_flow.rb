@@ -143,10 +143,6 @@ module BitexBot
     def self.expected_order_book?(transaction)
       transaction.raw.order_book == Settings.maker_settings.order_book
     end
-
-    def self.open_position?(transaction)
-      open_position_class.find_by_transaction_id(transaction.id)
-    end
     # end: sync_open_positions helpers
 
     validates :status, presence: true, inclusion: { in: statuses }
