@@ -71,8 +71,8 @@ describe KrakenApiWrapper do
     order_book.members.should contain_exactly(*%i[timestamp asks bids])
 
     order_book.timestamp.should be_a(Integer)
-    order_boook.asks.should be_an(Array)
-    order_boook.bids.should be_an(Array)
+    order_book.asks.should be_an(Array)
+    order_book.bids.should be_an(Array)
 
     bid = order_book.bids.sample
     bid.should be_a(ApiWrapper::OrderSummary)
