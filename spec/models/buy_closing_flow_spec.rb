@@ -85,10 +85,7 @@ describe BitexBot::BuyClosingFlow do
     end
 
     it 'retries until it finds the lost order' do
-      BitstampApiWrapper.stub(send_order: nil)
-      BitstampApiWrapper.stub(:orders) do
-        [BitstampApiWrapper::Order.new(1, :sell, 310, 2.5, 1.minute.ago.to_i)]
-      end
+      BitexBot::Robot.taker.stub(orders: [BitstampApiWrapper::Order.new(1, :sell, 310, 2.5, 1.minute.ago.to_i)])
 
       open = create(:open_buy)
       described_class.close_open_positions
