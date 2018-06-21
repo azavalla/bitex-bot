@@ -20,9 +20,9 @@ require 'bitex_bot/database'
 require 'bitex_bot/api.rb'
 require 'bitex_bot/api/wrapper.rb'
 Dir[File.dirname(__FILE__) + '/bitex_bot/api/**/*.rb'].each { |file| require file }
-require 'bitex_bot/models/opening_flow.rb'
-require 'bitex_bot/models/closing_flow.rb'
-Dir[File.dirname(__FILE__) + '/bitex_bot/models/*.rb'].each { |file| require file }
+require 'bitex_bot/opening_flow.rb'
+require 'bitex_bot/closing_flow.rb'
+Dir[File.dirname(__FILE__) + '/bitex_bot/*.rb'].each { |file| require file }
 require 'bitex_bot/robot'
 
 # #
