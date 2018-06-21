@@ -93,11 +93,11 @@ module BitexBot
     rescue Curl::Err::TimeoutError => e
       log(:error, "#{e.class} - #{e.message}:\n\n#{e.backtrace.join("\n")}")
       sleep_for(15)
-    rescue OrderNotFound => e
+    rescue Api::OrderNotFound => e
       notify("#{e.class} - #{e.message}:\n\n#{e.backtrace.join("\n")}")
-    rescue ApiWrapperError => e
+    rescue Api::WrapperError => e
       notify("#{e.class} - #{e.message}:\n\n#{e.backtrace.join("\n")}")
-    rescue OrderArgumentError => e
+    rescue Api::OrderArgumentError => e
       notify("#{e.class} - #{e.message}:\n\n#{e.backtrace.join("\n")}")
     rescue StandardError => e
       notify("#{e.class} - #{e.message}:\n\n#{e.backtrace.join("\n")}")

@@ -1,7 +1,7 @@
 module BitexBot
   module Api
     # This class represents the general behaviour for trading platform wrappers.
-    class ApiWrapper
+    class Wrapper
       # @return [Array<Transaction>]
       def transactions
         raise 'self subclass responsibility'
@@ -78,6 +78,6 @@ module BitexBot
     end
 
     class OrderNotFound < StandardError; end
-    class ApiWrapperError < StandardError; end
+    class WrapperError < StandardError; end
   end
 end

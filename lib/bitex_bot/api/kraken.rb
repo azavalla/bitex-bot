@@ -2,7 +2,7 @@ module BitexBot
   module Api
     # Wrapper implementation for Kraken API.
     # https://www.kraken.com/en-us/help/api
-    class Kraken < ApiWrapper
+    class Kraken < Wrapper
       attr_accessor :api_key, :api_secret, :client
 
       MIN_AMOUNT = 0.002.to_d
@@ -14,7 +14,7 @@ module BitexBot
       end
 
       def setup
-        KrakenOrder.api_wrapper = self
+        KrakenOrder.wrapper = self
         self.client ||= KrakenClient.load(api_key: api_key, api_secret: api_secret)
         HTTParty::Basement.headers('User-Agent' => BitexBot.user_agent)
       end
@@ -102,7 +102,9 @@ module BitexBot
         stock_market.map { |stock| OrderSummary.new(stock[0].to_d, stock[1].to_d) }
       end
 
-      # <KrakenOrder: @id='O5TDV2-WDYB2-6OGJRD', @type=:buy, @price='1.01', @amount='1.00000000', @datetime='2013-09-26 23:15:04'>
+      # <Api::KrakenOrder:
+      #   @id='O5TDV2-WDYB2-6OGJRD', @type=:buy, @price='1.01', @amount='1.00000000', @datetime='2013-09-26 23:15:04'
+      # >
       def order_parser(order)
         Order.new(order.id.to_s, order.type, order.price, order.amount, order.datetime, order)
       end

@@ -2,7 +2,7 @@ module BitexBot
   module Api
     # Wrapper implementation for Bitex API.
     # https://bitex.la/developers
-    class Bitex < ApiWrapper
+    class Bitex < Wrapper
       attr_accessor :api_key, :ssl_version, :debug, :sandbox
 
       def initialize(settings)
@@ -102,7 +102,7 @@ module BitexBot
       end
 
       # <Bitex::Bid
-      #   @id=12345678, @created_at=1999-12-31 21:10:00 -0300, @order_book=:btc_usd, @price=0.1e4, @status=:executing, @reason=nil,
+      #   @id=12345678, @created_at=1999-12-31 21:10:00 -0300, @order_book=:btc_usd, @price=0.1e4, @status=:executing, @reason=nil
       #   @issuer=nil, @amount=0.1e3, @remaining_amount=0.1e2, @produced_quantity=0.0
       # >
       def order_parser(order)

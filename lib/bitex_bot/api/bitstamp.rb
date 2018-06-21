@@ -2,7 +2,7 @@ module BitexBot
   module Api
     # Wrapper implementation for Bitstamp API.
     # https://www.bitstamp.net/api/
-    class Bitstamp < ApiWrapper
+    class Bitstamp < Wrapper
       attr_accessor :key, :secret, :client_id
 
       def initialize(settings)
@@ -31,7 +31,7 @@ module BitexBot
       def balance
         balance_summary_parser(::Bitstamp.balance.symbolize_keys)
       rescue StandardError => e
-        raise ApiWrapperError, "Bitstamp balance failed: #{e.message}"
+        raise WrapperError, "Bitstamp balance failed: #{e.message}"
       end
 
       def find_lost(type, price, _quantity)
@@ -56,7 +56,7 @@ module BitexBot
       def orders
         ::Bitstamp.orders.all.map { |o| order_parser(o) }
       rescue StandardError => e
-        raise ApiWrapperError, "Bitstamp orders failed: #{e.message}"
+        raise WrapperError, "Bitstamp orders failed: #{e.message}"
       end
 
       def send_order(type, price, quantity)
@@ -66,13 +66,13 @@ module BitexBot
       def transactions
         ::Bitstamp.transactions.map { |t| transaction_parser(t) }
       rescue StandardError => e
-        raise ApiWrapperError, "Bitstamp transactions failed: #{e.message}"
+        raise WrapperError, "Bitstamp transactions failed: #{e.message}"
       end
 
       def user_transactions
         ::Bitstamp.user_transactions.all.map { |ut| user_transaction_parser(ut) }
       rescue StandardError => e
-        raise ApiWrapperError, "Bitstamp user_transactions failed: #{e.message}"
+        raise WrapperError, "Bitstamp user_transactions failed: #{e.message}"
       end
 
       private_class_method

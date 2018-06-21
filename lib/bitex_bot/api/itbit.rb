@@ -2,7 +2,7 @@ module BitexBot
   module Api
     # Wrapper implementation for Itbit API.
     # https://api.itbit.com/docs
-    class Itbit < ApiWrapper
+    class Itbit < Wrapper
       attr_accessor :client_key, :secret, :user_id, :default_wallet_id, :sandbox
 
       def initialize(settings)

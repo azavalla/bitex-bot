@@ -17,8 +17,8 @@ describe BitexBot::SellClosingFlow do
   it 'closes a single open position completely' do
     stub_bitstamp_buy
     open = create :open_sell
-    BitexBot::SellClosingFlow.close_open_positions
-    flow = BitexBot::SellClosingFlow.last
+    described_class.close_open_positions
+    flow = described_class.last
 
     open.reload.closing_flow.should == flow
 
@@ -39,8 +39,8 @@ describe BitexBot::SellClosingFlow do
     stub_bitstamp_buy
     open_one = create :tiny_open_sell
     open_two = create :open_sell
-    BitexBot::SellClosingFlow.close_open_positions
-    flow = BitexBot::SellClosingFlow.last
+    described_class.close_open_positions
+    flow = described_class.last
 
     close = flow.close_positions.first
 
@@ -61,14 +61,14 @@ describe BitexBot::SellClosingFlow do
 
   describe 'when there are errors placing the closing order' do
     it 'keeps trying to place a closed position on bitstamp errors' do
-      BitstampApiWrapper.any_instance.stub(send_order: nil)
-      BitstampApiWrapper.any_instance.stub(find_lost: nil)
+      BitexBot::Robot.taker.stub(send_order: nil)
+      BitexBot::Robot.taker.stub(find_lost: nil)
 
       open = create :open_sell
       expect do
-        flow = BitexBot::SellClosingFlow.close_open_positions
-      end.to raise_exception(OrderNotFound)
-      flow = BitexBot::SellClosingFlow.last
+        flow = described_class.close_open_positions
+      end.to raise_exception(BitexBot::Api::OrderNotFound)
+      flow = described_class.last
 
       open.reload.closing_flow.should == flow
 
@@ -81,14 +81,14 @@ describe BitexBot::SellClosingFlow do
     end
 
     it 'retries until it finds the lost order' do
-      BitstampApiWrapper.any_instance.stub(send_order: nil)
-      BitstampApiWrapper.any_instance.stub(:orders) do
-        [ApiWrapper::Order.new(1, :buy, 290, 2, 1.minute.ago.to_i)]
+      BitexBot::Robot.taker.stub(send_order: nil)
+      BitexBot::Robot.taker.stub(:orders) do
+        [BitexBot::Api::Order.new(1, :buy, 290, 2, 1.minute.ago.to_i)]
       end
 
       open = create(:open_sell)
-      BitexBot::SellClosingFlow.close_open_positions
-      flow = BitexBot::SellClosingFlow.last
+      described_class.close_open_positions
+      flow = described_class.last
 
       flow.close_positions.should_not be_empty
       flow.close_positions.first do |position|
@@ -103,14 +103,14 @@ describe BitexBot::SellClosingFlow do
   it 'does not try to close if the amount is too low' do
     open = create :tiny_open_sell
     expect do
-      BitexBot::SellClosingFlow.close_open_positions.should be_nil
-    end.not_to change{ BitexBot::SellClosingFlow.count }
+      described_class.close_open_positions.should be_nil
+    end.not_to change{ described_class.count }
   end
 
   it 'does not try to close if there are no open positions' do
     expect do
-      BitexBot::SellClosingFlow.close_open_positions.should be_nil
-    end.not_to change{ BitexBot::SellClosingFlow.count }
+      described_class.close_open_positions.should be_nil
+    end.not_to change{ described_class.count }
   end
 
   describe 'when syncinc executed orders' do
@@ -122,8 +122,8 @@ describe BitexBot::SellClosingFlow do
     end
 
     it 'syncs the executed orders, calculates profit' do
-      BitexBot::SellClosingFlow.close_open_positions
-      flow = BitexBot::SellClosingFlow.last
+      described_class.close_open_positions
+      flow = described_class.last
       stub_bitstamp_orders_into_transactions
 
       flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
@@ -158,8 +158,8 @@ describe BitexBot::SellClosingFlow do
     end
 
     it 'retries closing at a higher price every minute' do
-      BitexBot::SellClosingFlow.close_open_positions
-      flow = BitexBot::SellClosingFlow.last
+      described_class.close_open_positions
+      flow = described_class.last
 
       expect do
         flow.sync_closed_positions(Bitstamp.orders.all, Bitstamp.user_transactions.all)
@@ -208,8 +208,8 @@ describe BitexBot::SellClosingFlow do
     end
 
     it 'does not retry for an amount less than minimum_for_closing' do
-      BitexBot::SellClosingFlow.close_open_positions
-      flow = BitexBot::SellClosingFlow.last
+      described_class.close_open_positions
+      flow = described_class.last
 
       20.times do
         Timecop.travel 60.seconds.from_now
@@ -231,8 +231,8 @@ describe BitexBot::SellClosingFlow do
     it 'can lose BTC if price had to be raised dramatically' do
       # This flow is forced to spend the original USD amount paying more than
       # expected, thus regaining less BTC than what was sold on bitex.
-      BitexBot::SellClosingFlow.close_open_positions
-      flow = BitexBot::SellClosingFlow.last
+      described_class.close_open_positions
+      flow = described_class.last
 
       60.times do
         Timecop.travel 60.seconds.from_now
