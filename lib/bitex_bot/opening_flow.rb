@@ -110,6 +110,7 @@ module BitexBot
         "Opening: #{name} ##{flow.id} was hit for #{transaction.raw.quantity} #{Settings.base.upcase} @ #{Settings.quote.upcase}"\
         " #{transaction.price}"
       )
+
       open_position_class.create!(
         transaction_id: transaction.id,
         price: transaction.price,

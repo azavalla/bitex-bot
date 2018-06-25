@@ -85,7 +85,7 @@ module BitexBot
     end
 
     def exchange_class(exchange)
-      "BitexBot::Api::#{exchange_name(exchange).capitalize}".constantize
+      "#{BitexBot::Api}::#{exchange_name(exchange).capitalize}".constantize
     end
 
     def exchange_settings(exchange)

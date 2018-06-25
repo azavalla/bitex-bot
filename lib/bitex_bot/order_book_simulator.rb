@@ -21,8 +21,8 @@ module BitexBot
     def self.run(volatility, transactions, order_book, amount_target, quantity_target)
       to_skip = estimate_quantity_to_skip(volatility, transactions)
       Robot.log(:debug, "Skipping #{to_skip} BTC")
-      seen = 0
 
+      seen = 0
       order_book.each do |order_summary|
         price = order_summary.price
         quantity = order_summary.quantity
@@ -44,8 +44,7 @@ module BitexBot
           return best_price('$', amount_target, price) if best_price?(amount, amount_target, seen)
           seen += amount
         end
-      end
-      order_book.last.price
+      end.last.price
     end
     # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
@@ -60,7 +59,7 @@ module BitexBot
     end
 
     def self.best_price?(volume, target, seen)
-      volume >= (target - seen)
+      volume >= target - seen
     end
 
     def self.best_price(currency, target, price)

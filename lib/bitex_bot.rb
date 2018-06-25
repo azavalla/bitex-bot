@@ -13,6 +13,7 @@ require 'mail'
 require 'bitex'
 require 'bitstamp'
 require 'itbit'
+require 'kraken_client'
 
 # BitexBot Models
 require 'bitex_bot/settings'

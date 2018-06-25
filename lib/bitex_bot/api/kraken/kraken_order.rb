@@ -1,5 +1,3 @@
-require 'kraken_client'
-
 module BitexBot
   module Api
     # Wrapper for Kraken orders.

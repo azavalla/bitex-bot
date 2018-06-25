@@ -16,6 +16,7 @@ module BitexBot
 
       # Don't even bother trying to close a position that's too small.
       return unless Robot.taker.enough_order_size?(quantity, price)
+
       create_closing_flow!(price, quantity, amount, open_positions)
     end
 
@@ -27,7 +28,6 @@ module BitexBot
     def self.create_closing_flow!(price, quantity, amount, open_positions)
       create!(desired_price: price, quantity: quantity, amount: amount, open_positions: open_positions)
         .create_initial_order_and_close_position!
-      nil
     end
     # end: close_open_positions helpers
 
@@ -83,8 +83,8 @@ module BitexBot
         Robot.log(:debug, "Finalised #{order.class}##{order.id}")
       end
     rescue StandardError => e
+      # just pass, we'll keep on trying until it's not in orders anymore.
       Robot.log(:debug, e)
-      nil # just pass, we'll keep on trying until it's not in orders anymore.
     end
 
     # This use hooks methods, these must be defined in the subclass:
