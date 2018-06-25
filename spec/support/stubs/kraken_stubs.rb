@@ -80,7 +80,7 @@ module KrakenStubs
     end
   end
 
-  def stub_kraken_transactions(count: 1, price: 1.5, amount: 2.5)
+  def stub_kraken_transactions
     api_client.public.stub(:trades).with('XBTUSD') do
       {
         XXBTZUSD: [
@@ -94,7 +94,7 @@ module KrakenStubs
   private
 
   def api_client
-    KrakenApiWrapper.client
+    BitexBot::Robot.taker.client
   end
 end
 
