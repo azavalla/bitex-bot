@@ -91,12 +91,12 @@ describe BitexBot::Api::Kraken do
     sample.price.should be_a(BigDecimal)
     sample.amount.should be_a(BigDecimal)
     sample.timestamp.should be_a(Integer)
-    sample.raw.should be_a(BitexBot::Api::KrakenOrder)
+    sample.raw.should be_a(described_class::Order)
   end
 
   context '#place_order' do
     it 'raises OrderNotFound error on Bitex errors' do
-      BitexBot::Api::KrakenOrder.stub(create!: nil)
+      described_class::Order.stub(create!: nil)
       wrapper.stub(find_lost: nil)
 
       expect { wrapper.place_order(:buy, 10, 100) }.to raise_exception(BitexBot::Api::OrderNotFound)
@@ -106,7 +106,7 @@ describe BitexBot::Api::Kraken do
 
   context '#send_order' do
     before(:each) do
-      BitexBot::Api::KrakenOrder.stub(closed: [])
+      described_class::Order.stub(closed: [])
     end
 
     def with_founded(type, price, quantity)
@@ -123,7 +123,7 @@ describe BitexBot::Api::Kraken do
       let(:client_error) { KrakenClient::ErrorResponse }
 
       def with_retries(retries)
-        BitexBot::Api::KrakenOrder.stub(:order_info_by) do
+        described_class::Order.stub(:order_info_by) do
           if retries.zero?
             retries += 1
             raise client_error, client_message

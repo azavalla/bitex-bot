@@ -79,5 +79,6 @@ module BitexBot
 
     class OrderNotFound < StandardError; end
     class WrapperError < StandardError; end
+    class OrderArgumentError < StandardError; end
   end
 end

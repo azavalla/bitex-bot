@@ -14,13 +14,13 @@ module BitexBot
       end
 
       def setup
-        KrakenOrder.wrapper = self
+        Kraken::Order.wrapper = self
         self.client ||= KrakenClient.load(api_key: api_key, api_secret: api_secret)
         HTTParty::Basement.headers('User-Agent' => BitexBot.user_agent)
       end
 
       def amount_and_quantity(order_id, _transactions)
-        KrakenOrder.amount_and_quantity(order_id)
+        Kraken::Order.amount_and_quantity(order_id)
       end
 
       def balance
@@ -34,7 +34,7 @@ module BitexBot
       end
 
       def find_lost(type, price, quantity)
-        KrakenOrder.find_lost(type, price, quantity)
+        Kraken::Order.find_lost(type, price, quantity)
       end
 
       def order_book
@@ -44,11 +44,11 @@ module BitexBot
       end
 
       def orders
-        KrakenOrder.open.map { |ko| order_parser(ko) }
+        Kraken::Order.open.map { |ko| order_parser(ko) }
       end
 
       def send_order(type, price, quantity)
-        KrakenOrder.create!(type, price, quantity)
+        Kraken::Order.create!(type, price, quantity)
       end
 
       def transactions
@@ -66,7 +66,7 @@ module BitexBot
 
       # { ZEUR: '1433.0939', XXBT: '0.0000000000', 'XETH': '99.7497224800' }
       def balance_summary_parser(balances)
-        open_orders = KrakenOrder.open
+        open_orders = Kraken::Order.open
         BalanceSummary.new(
           balance_parser(balances, :XXBT, btc_reserved(open_orders)),
           balance_parser(balances, :ZUSD, usd_reserved(open_orders)),
@@ -102,11 +102,11 @@ module BitexBot
         stock_market.map { |stock| OrderSummary.new(stock[0].to_d, stock[1].to_d) }
       end
 
-      # <Api::KrakenOrder:
+      # <Api::Kraken::Order:
       #   @id='O5TDV2-WDYB2-6OGJRD', @type=:buy, @price='1.01', @amount='1.00000000', @datetime='2013-09-26 23:15:04'
       # >
       def order_parser(order)
-        Order.new(order.id.to_s, order.type, order.price, order.amount, order.datetime, order)
+        Api::Order.new(order.id.to_s, order.type, order.price, order.amount, order.datetime, order)
       end
 
       # [
