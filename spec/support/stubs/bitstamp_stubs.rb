@@ -63,7 +63,7 @@ module BitstampStubs
   def stub_bitstamp_user_transactions(count: 1, usd: 1.5, btc: 2.5, btc_usd: 3.5, fee: 0.05)
     Bitstamp.user_transactions.stub(:all) do
       count.times.map do |i|
-        double(
+        Bitstamp::UserTransaction.new(
           id: i + 1,
           order_id: i + 1,
           type: (i % 2),
@@ -87,7 +87,7 @@ module BitstampStubs
   # the order list.
   def stub_bitstamp_orders_into_transactions(options = {})
     ratio = options[:ratio] || 1
-    transactions = Bitstamp.orders.all.map { |o| transaction(o, *usd_and_btc(o), ratio) }
+    transactions = Bitstamp.orders.all.map { |o| user_transaction(o, *usd_and_btc(o), ratio) }
     Bitstamp.stub(user_transactions: double(all: transactions))
     return unless ratio == 1
 
@@ -119,11 +119,11 @@ module BitstampStubs
   end
 
   def order(order_type, remote_id, amount, price)
-    double(id: remote_id, type: types[:orders][order_type], amount: amount, price: price, datetime: DateTime.now.to_s)
+    Bitstamp::Order.new(id: remote_id, type: types[:orders][order_type], amount: amount, price: price, datetime: DateTime.now.to_s)
   end
 
-  def transaction(order, usd, btc, ratio)
-    double(
+  def user_transaction(order, usd, btc, ratio)
+    Bitstamp::UserTransaction.new(
       usd: (usd * ratio).to_s,
       btc: (btc * ratio).to_s,
       btc_usd: order.price.to_s,
