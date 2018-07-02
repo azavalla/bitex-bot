@@ -20,8 +20,8 @@ module BitexBot
         end
       end
 
-      def amount_and_quantity(order_id, transactions)
-        closes = transactions.select { |t| t.order_id.to_s == order_id }
+      def amount_and_quantity(order_id)
+        closes = user_transactions.select { |t| t.order_id.to_s == order_id }
         amount = closes.map { |c| c.usd.to_d }.sum.abs
         quantity = closes.map { |c| c.btc.to_d }.sum.abs
 
@@ -119,7 +119,7 @@ module BitexBot
 
       # <Bitstamp::Transactions: @tid=1469074, @price='126.95', @amount='1.10000000', @date='1380648951'>
       def transaction_parser(transaction)
-        Transaction.new(transaction.tid, transaction.price.to_d, transaction.amount.to_d, transaction.date.to_i)
+        Transaction.new(transaction.tid, transaction.price.to_d, transaction.amount.to_d, transaction.date.to_i, transaction)
       end
 
       # <Bitstamp::UserTransaction:

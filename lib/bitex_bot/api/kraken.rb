@@ -19,7 +19,7 @@ module BitexBot
         HTTParty::Basement.headers('User-Agent' => BitexBot.user_agent)
       end
 
-      def amount_and_quantity(order_id, _transactions)
+      def amount_and_quantity(order_id)
         KrakenOrder.amount_and_quantity(order_id)
       end
 
@@ -115,7 +115,7 @@ module BitexBot
       #   ['202.54000', '0.10000000', 1440277322.8993, 'b', 'l', '']
       # ]
       def transaction_parser(transaction)
-        Transaction.new(transaction[2].to_i, transaction[0].to_d, transaction[1].to_d, transaction[2].to_i)
+        Transaction.new(transaction[2].to_i, transaction[0].to_d, transaction[1].to_d, transaction[2].to_i, transaction)
       end
     end
   end
