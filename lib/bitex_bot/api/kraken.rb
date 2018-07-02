@@ -19,8 +19,8 @@ module BitexBot
         HTTParty::Basement.headers('User-Agent' => BitexBot.user_agent)
       end
 
-      def amount_and_quantity(order_id, _transactions)
-        Kraken::Order.amount_and_quantity(order_id)
+      def amount_and_quantity(order_id)
+        KrakenOrder.amount_and_quantity(order_id)
       end
 
       def balance

@@ -66,7 +66,7 @@ describe BitexBot::BuyOpeningFlow do
 
         it 'with other fx_rate' do
           other_fx_rate = 10.to_d
-          BitexBot::Settings.stub(fx_rate: other_fx_rate)
+          BitexBot::Settings.stub(buying_foreign_exchange_rate: other_fx_rate)
 
           flow.order_id.should eq order_id
           flow.value_to_use.should eq amount_to_spend

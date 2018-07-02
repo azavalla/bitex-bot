@@ -30,13 +30,13 @@ describe BitexBot::Api::Bitex do
 
     balance = wrapper.balance
     balance.should be_a(BitexBot::Api::BalanceSummary)
-    balance.members.should contain_exactly(*%i[btc usd fee])
+    balance.members.should contain_exactly(*%i[crypto fiat fee])
 
-    balance.btc.should be_a(BitexBot::Api::Balance)
-    balance.usd.should be_a(BitexBot::Api::Balance)
+    balance.crypto.should be_a(BitexBot::Api::Balance)
+    balance.fiat.should be_a(BitexBot::Api::Balance)
     balance.fee.should be_a(BigDecimal)
 
-    [balance.btc, balance.usd].all? do |sample|
+    [balance.crypto, balance.fiat].all? do |sample|
       sample.members.should contain_exactly(*%i[total reserved available])
 
       sample.total.should be_a(BigDecimal)

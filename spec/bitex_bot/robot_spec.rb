@@ -55,6 +55,7 @@ describe BitexBot::Robot do
     stub_bitstamp_api_wrapper_order_book
 
     bot.trade!
+
     stub_bitex_transactions
 
     buying = BitexBot::BuyOpeningFlow.last
@@ -120,6 +121,8 @@ describe BitexBot::Robot do
 
   context 'with another bot updating store flags' do
     let(:other_bot) { described_class.new }
+    let(:crypto_stop) { 30 }
+    let(:fiat_stop) { 11_000 }
 
     def with_transaction
       yield
@@ -131,16 +134,31 @@ describe BitexBot::Robot do
       with_transaction { other_bot.store.update!(hold: true) }
     end
 
-    it 'stops trading when fiat stop is reached' do
-      with_transaction { other_bot.store.update!(btc_stop: 30) }
+    context 'on maker stops trading when' do
+      it 'fiat stop is reached' do
+        with_transaction { other_bot.store.update!(maker_fiat_stop: fiat_stop) }
+      end
+
+      it 'crypto stop is reached' do
+        with_transaction { other_bot.store.update!(maker_crypto_stop: crypto_stop) }
+      end
     end
 
-    it 'stops trading when btc stop is reached' do
-      with_transaction { other_bot.store.update!(fiat_stop: 11_000) }
+    context 'on taker stops trading when' do
+      it 'fiat stop is reached' do
+        with_transaction { other_bot.store.update!(taker_fiat_stop: fiat_stop) }
+      end
+
+      it 'crypto stop is reached' do
+        with_transaction { other_bot.store.update!(taker_crypto_stop: crypto_stop) }
+      end
     end
 
     context 'with empty bitex trades' do
       before(:each) { Bitex::Trade.stub(all: []) }
+
+      let(:crypto_warning) { 30 }
+      let(:fiat_warning) { 11_000 }
 
       def with_transaction
         yield
@@ -160,21 +178,128 @@ describe BitexBot::Robot do
         expect { bot.trade! }.to change { Mail::TestMailer.deliveries.count }.by(1)
       end
 
-      it 'warns every 30 minutes when usd warn is reached' do
-        with_transaction { other_bot.store.update(fiat_warning: 11_000) }
+      context 'on maker warns every 30 minutes when' do
+        it 'crypto warn is reached' do
+          with_transaction { other_bot.store.update!(maker_crypto_warning: crypto_warning) }
+        end
+
+        it 'fiat warns reached' do
+          with_transaction { other_bot.store.update!(maker_fiat_warning: fiat_warning) }
+        end
       end
 
-      it 'warns every 30 minutes when btc warn is reached' do
-        with_transaction { other_bot.store.update!(btc_warning: 30) }
+      context 'on taker warns every 30 minutes when' do
+        it 'crypto warn is reached' do
+          with_transaction { other_bot.store.update!(taker_crypto_warning: crypto_warning) }
+        end
+
+        it 'fiat warn is reached' do
+          with_transaction { other_bot.store.update!(taker_fiat_warning: fiat_warning) }
+        end
       end
     end
   end
 
-  it 'updates taker_fiat and taker_btc' do
+  context 'stops trading when' do
+    before(:each) do
+      Bitex::Profile.stub(get: {
+        fee: 0.5,
+        usd_balance:   10.00,
+        usd_reserved:  10.00,
+        usd_available: 10.00,
+        btc_balance:   10.00,
+        btc_reserved:  10.00,
+        btc_available: 10.00
+      })
+
+      stub_bitstamp_api_wrapper_balance(10, 10, 0.05)
+    end
+
+    after(:each) { expect { bot.trade! }.not_to change { BitexBot::BuyOpeningFlow.count } }
+
+    let(:other_bot) { described_class.new  }
+
+    it 'does not place new opening flows when ordered to hold' do
+      other_bot.store.update(hold: true)
+    end
+
+    context 'maker' do
+      it 'crypto stop is reached' do
+        other_bot.store.update(maker_crypto_stop: 30)
+      end
+
+      it 'fiat stop is reached' do
+        other_bot.store.update(maker_fiat_stop: 30)
+      end
+    end
+
+    context 'taker' do
+      it 'crypto stop is reached' do
+        other_bot.store.update(taker_crypto_stop: 30)
+      end
+
+      it 'fiat stop is reached' do
+        other_bot.store.update(taker_fiat_stop: 30)
+      end
+    end
+  end
+
+  context 'warns every 30 minutes when' do
+    before(:each) do
+      Bitex::Profile.stub(get: {
+        fee: 0.5,
+        usd_balance:   10.00,
+        usd_reserved:   1.00,
+        usd_available:  9.00,
+        btc_balance:   10.00,
+        btc_reserved:   1.00,
+        btc_available:  9.00
+      })
+      Bitex::Trade.stub(all: [])
+      stub_bitstamp_api_wrapper_balance(100, 100)
+      other_bot.store.update(maker_crypto_warning: 0, taker_crypto_warning: 0, maker_fiat_warning: 0, taker_fiat_warning: 0)
+    end
+
+    after(:each) do
+      expect { bot.trade! }.to change { Mail::TestMailer.deliveries.count }.by(1)
+
+      Timecop.travel 1.minute.from_now
+      stub_bitstamp_order_book # Re-stub so order book does not get old
+      expect { bot.trade! }.not_to change { Mail::TestMailer.deliveries.count }
+
+      Timecop.travel 31.minutes.from_now
+      stub_bitstamp_order_book # Re-stub so order book does not get old
+      expect { bot.trade! }.to change { Mail::TestMailer.deliveries.count }.by(1)
+    end
+
+    let(:other_bot) { described_class.new  }
+
+    context 'maker' do
+      it 'crypto warning is reached' do
+        other_bot.store.update(maker_crypto_warning: 100)
+      end
+
+      it 'fiat warning is reached' do
+        other_bot.store.update(maker_fiat_warning: 100)
+      end
+    end
+
+    context 'taker' do
+      it 'crypto warning is reached' do
+        other_bot.store.update(taker_crypto_warning: 100)
+      end
+
+      it 'fiat warning is reached' do
+        other_bot.store.update(taker_fiat_warning: 100)
+      end
+    end
+  end
+
+  it 'updates taker_fiat and taker_crypto' do
     bot.trade!
 
     bot.store.taker_fiat.should_not be_nil
-    bot.store.taker_btc.should_not be_nil
+    bot.store.taker_crypto.should_not be_nil
   end
 
   it 'notifies exceptions and sleeps' do

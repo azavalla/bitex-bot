@@ -39,9 +39,9 @@ module BitexBot
     )
 
     BalanceSummary = Struct.new(
-      :btc, # Balance
-      :usd, # Balance
-      :fee  # Decimal
+      :crypto, # Balance
+      :fiat,   # Balance
+      :fee     # Decimal
     )
 
     Balance = Struct.new(

@@ -64,7 +64,7 @@ describe BitexBot::SellOpeningFlow do
 
         it 'with other fx_rate' do
           other_fx_rate = 10.to_d
-          BitexBot::Settings.stub(fx_rate: other_fx_rate)
+          BitexBot::Settings.stub(selling_fx_rate: other_fx_rate)
 
           flow.order_id.should eq order_id
           flow.value_to_use.should eq quantity_to_sell
