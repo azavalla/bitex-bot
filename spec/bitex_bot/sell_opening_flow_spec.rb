@@ -36,30 +36,22 @@ describe BitexBot::SellOpeningFlow do
 
       it 'sells 2 btc' do
         quantity_to_sell = 2.to_d
-        suggested_closing_price = 20.to_d
-        usd_price = '20.15_037_593_984_962'.to_d
         BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0))
 
         flow.order_id.should eq order_id
         flow.value_to_use.should eq quantity_to_sell
-        flow.price.should >= suggested_closing_price
-        flow.price.round(14).should eq usd_price
-        flow.suggested_closing_price.should eq suggested_closing_price
+        flow.price.should >= flow.suggested_closing_price
       end
 
       context 'sells 4 btc' do
         before(:each) { BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0)) }
 
         let(:quantity_to_sell) { 4.to_d }
-        let(:suggested_closing_price) { 25.to_d }
-        let(:usd_price) { '25.18_796_992_481_203'.to_d }
 
         it 'with default fx_rate (1)' do
           flow.order_id.should eq order_id
           flow.value_to_use.should eq quantity_to_sell
-          flow.price.should >= suggested_closing_price
-          flow.price.should eq usd_price
-          flow.suggested_closing_price.should eq suggested_closing_price
+          flow.price.should >= flow.suggested_closing_price
         end
 
         it 'with other fx_rate' do
@@ -68,23 +60,17 @@ describe BitexBot::SellOpeningFlow do
 
           flow.order_id.should eq order_id
           flow.value_to_use.should eq quantity_to_sell
-          flow.price.should >= suggested_closing_price * other_fx_rate
-          flow.price.truncate(13).should eq usd_price * other_fx_rate
-          flow.suggested_closing_price.should eq suggested_closing_price
+          flow.price.should >= flow.suggested_closing_price * other_fx_rate
         end
       end
 
       it 'raises the price to charge on bitex to take a profit' do
         quantity_to_sell = 4.to_d
-        suggested_closing_price = 25.to_d
-        usd_price = '37.78_195_488_721_804'.to_d
         BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 50.to_d))
 
         flow.order_id.should eq order_id
         flow.value_to_use.should eq quantity_to_sell
-        flow.price.should >= suggested_closing_price
-        flow.price.truncate(14).should eq usd_price
-        flow.suggested_closing_price.should eq suggested_closing_price
+        flow.price.should >= flow.suggested_closing_price
       end
 
       it 'fails when there is a problem placing the ask on bitex' do
