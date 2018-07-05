@@ -55,7 +55,7 @@ describe BitexBot::BuyOpeningFlow do
         it 'with default fx_rate (1)' do
           flow.order_id.should eq order_id
           flow.value_to_use.should eq amount_to_spend
-          flow.price.should.should <= flow.suggested_closing_price
+          flow.price.should <= flow.suggested_closing_price
         end
 
         it 'with other fx_rate' do
