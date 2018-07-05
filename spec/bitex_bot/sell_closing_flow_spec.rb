@@ -112,7 +112,7 @@ describe BitexBot::SellClosingFlow do
     expect { described_class.close_open_positions.should be_nil }.not_to change{ described_class.count }
   end
 
-  describe 'when syncinc executed orders' do
+  describe 'when sync executed orders' do
     before(:each) do
       stub_bitstamp_trade(:buy)
       stub_bitstamp_empty_user_transactions

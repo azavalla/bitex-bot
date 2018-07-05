@@ -38,30 +38,24 @@ describe BitexBot::BuyOpeningFlow do
 
       it 'spends 50 usd' do
         amount_to_spend = 50.to_d
-        suggested_closing_price = 20.to_d
         usd_price = '19.85074626865672'.to_d
         BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0))
 
         flow.order_id.should eq order_id
         flow.value_to_use.should eq amount_to_spend
-        flow.price.should <= suggested_closing_price
-        flow.price.round(14).should eq usd_price
-        flow.suggested_closing_price.should eq suggested_closing_price
+        flow.price.should <= flow.suggested_closing_price
       end
 
       context 'spends 100 usd' do
         before(:each) { BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0)) }
 
         let(:amount_to_spend) { 100.to_d }
-        let(:suggested_closing_price) { 15.to_d }
         let(:usd_price) { '14.888_059_701_492'.to_d }
 
         it 'with default fx_rate (1)' do
           flow.order_id.should eq order_id
           flow.value_to_use.should eq amount_to_spend
-          flow.price.should.should <= suggested_closing_price
-          flow.price.truncate(12).should eq usd_price
-          flow.suggested_closing_price.should eq suggested_closing_price
+          flow.price.should.should <= flow.suggested_closing_price
         end
 
         it 'with other fx_rate' do
@@ -70,24 +64,19 @@ describe BitexBot::BuyOpeningFlow do
 
           flow.order_id.should eq order_id
           flow.value_to_use.should eq amount_to_spend
-          flow.price.should <= suggested_closing_price * other_fx_rate
-          flow.price.truncate(11).should eq usd_price * other_fx_rate
-          flow.suggested_closing_price.should eq suggested_closing_price
+          flow.price.should <= flow.suggested_closing_price * other_fx_rate
         end
       end
 
       it 'lowers the price to pay on bitex to take a profit' do
         profit = 50.to_d
         amount_to_spend = 100.to_d
-        suggested_closing_price = 15.to_d
         usd_price = '7.44_402_985_074_627'.to_d
         BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: profit))
 
         flow.order_id.should eq order_id
         flow.value_to_use.should eq amount_to_spend
-        flow.price.should <= suggested_closing_price
-        flow.price.round(14).should eq usd_price
-        flow.suggested_closing_price.should eq suggested_closing_price
+        flow.price.should <= flow.suggested_closing_price
       end
 
       it 'fails when there is a problem placing the bid on bitex' do
@@ -182,9 +171,7 @@ describe BitexBot::BuyOpeningFlow do
       Bitex::Trade.stub(all: [build(:bitex_buy, id: 23_456, order_book: :btc_ars)])
 
       flow.order_id.should == 12345
-      expect do
-        described_class.sync_open_positions.should be_empty
-      end.not_to change { BitexBot::OpenBuy.count }
+      expect { described_class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenBuy.count }
       BitexBot::OpenBuy.count.should be_zero
     end
 
