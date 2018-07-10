@@ -36,7 +36,7 @@ describe BitexBot::SellOpeningFlow do
 
       it 'sells 2 btc' do
         quantity_to_sell = 2.to_d
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0))
+        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0, fx_rate: 1))
 
         flow.order_id.should eq order_id
         flow.value_to_use.should eq quantity_to_sell
@@ -44,7 +44,7 @@ describe BitexBot::SellOpeningFlow do
       end
 
       context 'sells 4 btc' do
-        before(:each) { BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0)) }
+        before(:each) { BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0, fx_rate: 1)) }
 
         let(:quantity_to_sell) { 4.to_d }
 
@@ -60,13 +60,13 @@ describe BitexBot::SellOpeningFlow do
 
           flow.order_id.should eq order_id
           flow.value_to_use.should eq quantity_to_sell
-          flow.price.should >= flow.suggested_closing_price * other_fx_rate
+          flow.price.should >= flow.suggested_closing_price
         end
       end
 
       it 'raises the price to charge on bitex to take a profit' do
         quantity_to_sell = 4.to_d
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 50.to_d))
+        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 50.to_d, fx_rate: 1))
 
         flow.order_id.should eq order_id
         flow.value_to_use.should eq quantity_to_sell
@@ -74,7 +74,7 @@ describe BitexBot::SellOpeningFlow do
       end
 
       it 'fails when there is a problem placing the ask on bitex' do
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 4, profit: 0))
+        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 4, profit: 0, fx_rate: 1))
         Bitex::Ask.stub(:create!) { raise StandardError, 'Cannot Create' }
 
         expect do
@@ -88,14 +88,14 @@ describe BitexBot::SellOpeningFlow do
 
         it 'Prioritizes profit from it' do
           usd_price = '20.25_112_781_954_887'.to_d
-          BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 2, profit: 0))
+          BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 2, profit: 0, fx_rate: 1))
 
           flow.price.round(14).should eq usd_price
         end
       end
 
       it 'cancels the associated bitex ask' do
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 2, profit: 0))
+        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 2, profit: 0, fx_rate: 1))
 
         flow.finalise!.should be_truthy
         flow.should be_settling
@@ -109,7 +109,7 @@ describe BitexBot::SellOpeningFlow do
       let(:usd_balance) { 1.to_d }
 
       it 'fails when there are not enough USD to re-buy in the other exchange' do
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 4, profit: 0))
+        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 4, profit: 0, fx_rate: 1))
 
         expect do
           flow.should be_nil

@@ -30,11 +30,11 @@ module BitexBot
     end
 
     def buying_fx_rate
-      Store.first.try(:buying_fx_rate) || buying_foreign_exchange_rate
+      Store.first.try(:buying_fx_rate) || buying.fx_rate
     end
 
     def selling_fx_rate
-      Store.first.try(:selling_fx_rate) || selling_foreign_exchange_rate
+      Store.first.try(:selling_fx_rate) || selling.fx_rate
     end
 
     def base

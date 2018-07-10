@@ -129,8 +129,6 @@ module BitexBot
           end
         end
 
-        private_class_method
-
         def self.private_request
           wrapper.client.private
         end

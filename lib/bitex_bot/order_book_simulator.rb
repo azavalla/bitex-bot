@@ -49,8 +49,6 @@ module BitexBot
     end
     # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
-    private_class_method
-
     def self.estimate_quantity_to_skip(volatility, transactions)
       threshold = transactions.first.timestamp - volatility
       transactions
