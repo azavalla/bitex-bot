@@ -175,8 +175,6 @@ module BitexBot
 
       check_balance_warning if expired_last_warning?
       return if stop_opening_flows?
-      return log(:debug, "Not placing new orders, #{Settings.quote} target not met") if alert?(:fiat, :stop)
-      return log(:debug, "Not placing new orders, #{Settings.base} target not met") if alert?(:crypto, :stop)
 
       order_book = with_cooldown { taker.order_book }
       transactions = with_cooldown { taker.transactions }
