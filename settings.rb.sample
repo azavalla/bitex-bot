@@ -20,7 +20,7 @@ time_to_live 20
 #   Your profit when buying on Bitex, 0.5 means 0.5%.
 #   After calculating the price at which bitcoins can be sold on taker, the robot deduces your profit from that price, and places
 #    a bid on Bitex paying a lower price.
-buying amount_to_spend_per_order: 10.0.to_d, profit: 0.5.to_d
+buying amount_to_spend_per_order: 10.to_d, profit: 0.5.to_d, fx_rate: 1.to_d
 
 # Settings for selling on maker and buying on taker.
 # quantity_to_sell_per_order:
@@ -36,13 +36,13 @@ buying amount_to_spend_per_order: 10.0.to_d, profit: 0.5.to_d
 #   Your profit when selling on Bitex, 0.5 means 0.5%.
 #   After calculating the price at which bitcoins can be bought on taker, the robot deduces your profit from that price and
 #   places an ask on Bitex charging a higher price.
-selling quantity_to_sell_per_order: 0.1.to_d, profit: 0.5.to_d
+selling quantity_to_sell_per_order: 0.1.to_d, profit: 0.5.to_d, fx_rate: 1.to_d
 
 # Quote fx rate for selling for order book
-selling_foreign_exchange_rate 1.to_d
+# selling_foreign_exchange_rate 1.to_d
 
 # Quote fx rate for buying for order book
-buying_foreign_exchange_rate 1.to_d
+# buying_foreign_exchange_rate 1.to_d
 
 # This is your maker, at the moment only will operates with bitex
 #   api_key: it's passed in to the bitex gem: https://github.com/bitex-la/bitex-ruby.

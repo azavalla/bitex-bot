@@ -75,7 +75,7 @@ module BitexBot
     # end: create_for_market helpers
 
     def self.fx_rate
-      Settings.buying_fx_rate
+      Settings.buying.fx_rate
     end
   end
 end

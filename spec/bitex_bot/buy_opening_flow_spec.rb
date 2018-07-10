@@ -39,7 +39,7 @@ describe BitexBot::BuyOpeningFlow do
       it 'spends 50 usd' do
         amount_to_spend = 50.to_d
         usd_price = '19.85074626865672'.to_d
-        BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0))
+        BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0, fx_rate: 1))
 
         flow.order_id.should eq order_id
         flow.value_to_use.should eq amount_to_spend
@@ -47,7 +47,7 @@ describe BitexBot::BuyOpeningFlow do
       end
 
       context 'spends 100 usd' do
-        before(:each) { BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0)) }
+        before(:each) { BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0, fx_rate: 1)) }
 
         let(:amount_to_spend) { 100.to_d }
         let(:usd_price) { '14.888_059_701_492'.to_d }
@@ -60,7 +60,7 @@ describe BitexBot::BuyOpeningFlow do
 
         it 'with other fx_rate' do
           other_fx_rate = 10.to_d
-          BitexBot::Settings.stub(buying_foreign_exchange_rate: other_fx_rate)
+          BitexBot::Settings.buying.stub(fx_rate: other_fx_rate)
 
           flow.order_id.should eq order_id
           flow.value_to_use.should eq amount_to_spend
@@ -72,7 +72,7 @@ describe BitexBot::BuyOpeningFlow do
         profit = 50.to_d
         amount_to_spend = 100.to_d
         usd_price = '7.44_402_985_074_627'.to_d
-        BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: profit))
+        BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: profit, fx_rate: 1))
 
         flow.order_id.should eq order_id
         flow.value_to_use.should eq amount_to_spend
@@ -81,7 +81,7 @@ describe BitexBot::BuyOpeningFlow do
 
       it 'fails when there is a problem placing the bid on bitex' do
         amount_to_spend = 100.to_d
-        BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0))
+        BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0, fx_rate: 1))
         Bitex::Bid.stub(:create!) { raise StandardError, 'Cannot Create' }
 
         expect do
@@ -96,7 +96,7 @@ describe BitexBot::BuyOpeningFlow do
         it 'prioritizes profit from it' do
           amount_to_spend = 50.to_d
           usd_price = '19.7514925373134'.to_d
-          BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0))
+          BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0, fx_rate: 1))
 
           flow.price.round(13).should eq usd_price
         end
@@ -104,7 +104,7 @@ describe BitexBot::BuyOpeningFlow do
 
       it 'cancels the associated bitex bid' do
         amount_to_spend = 50.to_d
-        BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0))
+        BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0, fx_rate: 1))
 
         flow.finalise!.should be_truthy
         flow.should be_settling
@@ -119,7 +119,7 @@ describe BitexBot::BuyOpeningFlow do
 
       it 'fails when there are not enough bitcoin to sell in the other exchange' do
         amount_to_spend = 100.to_d
-        BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0))
+        BitexBot::Settings.stub(buying: double(amount_to_spend_per_order: amount_to_spend, profit: 0, fx_rate: 1))
 
         expect do
           flow.should be_nil

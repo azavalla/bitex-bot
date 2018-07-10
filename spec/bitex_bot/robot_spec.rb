@@ -14,8 +14,8 @@ describe BitexBot::Robot do
     BitexBot::Robot.setup
     BitexBot::Settings.stub(
       time_to_live: 10,
-      buying: double(amount_to_spend_per_order: 50, profit: 0),
-      selling: double(quantity_to_sell_per_order: 1, profit: 0),
+      buying: double(amount_to_spend_per_order: 50, profit: 0, fx_rate: 1),
+      selling: double(quantity_to_sell_per_order: 1, profit: 0, fx_rate: 1),
       mailer: double(
         from: 'test@test.com',
         to: 'test@test.com',
@@ -134,23 +134,13 @@ describe BitexBot::Robot do
       with_transaction { other_bot.store.update!(hold: true) }
     end
 
-    context 'on maker stops trading when' do
+    context 'stops trading when' do
       it 'fiat stop is reached' do
-        with_transaction { other_bot.store.update!(maker_fiat_stop: fiat_stop) }
+        with_transaction { other_bot.store.update!(fiat_stop: fiat_stop) }
       end
 
       it 'crypto stop is reached' do
-        with_transaction { other_bot.store.update!(maker_crypto_stop: crypto_stop) }
-      end
-    end
-
-    context 'on taker stops trading when' do
-      it 'fiat stop is reached' do
-        with_transaction { other_bot.store.update!(taker_fiat_stop: fiat_stop) }
-      end
-
-      it 'crypto stop is reached' do
-        with_transaction { other_bot.store.update!(taker_crypto_stop: crypto_stop) }
+        with_transaction { other_bot.store.update!(crypto_stop: crypto_stop) }
       end
     end
 
@@ -178,23 +168,13 @@ describe BitexBot::Robot do
         expect { bot.trade! }.to change { Mail::TestMailer.deliveries.count }.by(1)
       end
 
-      context 'on maker warns every 30 minutes when' do
+      context 'warns every 30 minutes when' do
         it 'crypto warn is reached' do
-          with_transaction { other_bot.store.update!(maker_crypto_warning: crypto_warning) }
+          with_transaction { other_bot.store.update!(crypto_warning: crypto_warning) }
         end
 
         it 'fiat warns reached' do
-          with_transaction { other_bot.store.update!(maker_fiat_warning: fiat_warning) }
-        end
-      end
-
-      context 'on taker warns every 30 minutes when' do
-        it 'crypto warn is reached' do
-          with_transaction { other_bot.store.update!(taker_crypto_warning: crypto_warning) }
-        end
-
-        it 'fiat warn is reached' do
-          with_transaction { other_bot.store.update!(taker_fiat_warning: fiat_warning) }
+          with_transaction { other_bot.store.update!(fiat_warning: fiat_warning) }
         end
       end
     end

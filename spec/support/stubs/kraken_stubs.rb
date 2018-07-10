@@ -8,6 +8,9 @@ module KrakenStubs
   end
 
   def stub_kraken_balance
+    stub_kraken_private_client
+    stub_kraken_orders
+    stub_kraken_trade_volume
     api_client.private.stub(account_info: [{ taker_fees: '89.2' }])
     api_client.private.stub(:balance) do
       { 'XXBT': '1433.0939', 'ZUSD': '1230.0233', 'XETH': '99.7497224800' }.with_indifferent_access
@@ -43,6 +46,7 @@ module KrakenStubs
   end
 
   def stub_kraken_order_book(count: 3, price: 1.5, amount: 2.5)
+    stub_kraken_public_client
     api_client.public.stub(:order_book) do
       {
         'XXBTZUSD' => {
@@ -54,6 +58,7 @@ module KrakenStubs
   end
 
   def stub_kraken_orders
+    stub_kraken_private_client
     api_client.private.stub(:open_orders) do
       {
         'open' => {
@@ -81,6 +86,7 @@ module KrakenStubs
   end
 
   def stub_kraken_transactions
+    stub_kraken_public_client
     api_client.public.stub(:trades).with('XBTUSD') do
       {
         XXBTZUSD: [
