@@ -62,8 +62,6 @@ module BitexBot
         []
       end
 
-      private_class_method
-
       # { ZEUR: '1433.0939', XXBT: '0.0000000000', 'XETH': '99.7497224800' }
       def balance_summary_parser(balances)
         open_orders = KrakenOrder.open
