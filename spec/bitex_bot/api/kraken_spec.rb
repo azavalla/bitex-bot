@@ -1,16 +1,8 @@
 require 'spec_helper'
 
 describe BitexBot::Api::Kraken do
-  let(:taker_settings) do
-    BitexBot::SettingsClass.new(
-      kraken: {
-        api_key: 'your_api_key', api_secret: 'your_api_secret'
-      }
-    )
-  end
-
   before(:each) do
-    BitexBot::Settings.stub(taker: taker_settings)
+    BitexBot::Settings.stub(taker: build(:kraken_taker))
     BitexBot::Robot.setup
   end
 

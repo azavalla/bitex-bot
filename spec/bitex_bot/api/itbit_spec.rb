@@ -1,16 +1,8 @@
 require 'spec_helper'
 
 describe BitexBot::Api::Itbit do
-  let(:taker_settings) do
-    BitexBot::SettingsClass.new(
-      itbit: {
-        client_key: 'client-key', secret: 'secret', user_id: 'user-id',  default_wallet_id: 'wallet-000', sandbox: false
-      }
-    )
-  end
-
   before(:each) do
-    BitexBot::Settings.stub(taker: taker_settings)
+    BitexBot::Settings.stub(taker: build(:itbit_taker))
     BitexBot::Robot.setup
   end
 
