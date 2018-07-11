@@ -37,7 +37,7 @@ describe BitexBot::Settings do
       end
 
       context 'is loaded, take rate from' do
-        before(:each) { BitexBot::Store.stub(first: BitexBot::Store.new) }
+        before(:each) { create(:store) }
         let(:fx_rate) { rand(10) }
 
         context 'buying' do

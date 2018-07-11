@@ -15,7 +15,7 @@ describe BitexBot::BuyOpeningFlow do
   let(:transactions) { bitstamp_api_wrapper_transactions_stub }
   let(:maker_fee) { 0.5.to_d }
   let(:taker_fee) { 0.25.to_d }
-  let(:store) { BitexBot::Store.create }
+  let(:store) { create(:store) }
 
   describe 'when creating a buying flow' do
     before(:each) do
@@ -91,7 +91,7 @@ describe BitexBot::BuyOpeningFlow do
       end
 
       context 'with preloaded store' do
-        let(:store) { BitexBot::Store.new(buying_profit: 0.5) }
+        let(:store) { create(:store, buying_profit: 0.5.to_d) }
 
         it 'prioritizes profit from it' do
           amount_to_spend = 50.to_d
