@@ -1,16 +1,8 @@
 require 'spec_helper'
 
 describe BitexBot::Api::Bitex do
-  let(:taker_settings) do
-    BitexBot::SettingsClass.new(
-      bitex: {
-        api_key: 'taker_api_key', ssl_version: nil, debug: false, sandbox: false
-      }
-    )
-  end
-
   before(:each) do
-    BitexBot::Settings.stub(taker: taker_settings)
+    BitexBot::Settings.stub(taker: build(:bitex_taker))
     BitexBot::Robot.setup
   end
 
