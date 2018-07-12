@@ -10,106 +10,103 @@ describe BitexBot::SellOpeningFlow do
   before(:each) { BitexBot::Robot.setup }
 
   let(:order_id) { 12_345 }
-  let(:time_to_live) { 3 }
-  let(:order_book) { bitstamp_api_wrapper_order_book }
+  let(:order_book) { bitstamp_api_wrapper_order_book.asks }
   let(:transactions) { bitstamp_api_wrapper_transactions_stub }
-  let(:maker_fee) { 0.5.to_d }
-  let(:taker_fee) { 0.25.to_d }
   let(:store) { create(:store) }
 
   describe 'when creating a selling flow' do
     before(:each) do
-      BitexBot::Settings.stub(time_to_live: time_to_live)
+      BitexBot::Settings.stub(time_to_live: 3.to_d)
       stub_bitex_active_orders
     end
 
-    let(:flow) { described_class.create_for_market(usd_balance, order_book.asks, transactions, maker_fee, taker_fee, store) }
+    let(:flow) do
+      described_class.create_for_market(
+        balance.to_d,
+        order_book,
+        transactions,
+        0.5.to_d,
+        0.25.to_d,
+        store
+      )
+    end
 
     context 'with USD balance 1000' do
-      let(:usd_balance) { 1_000.to_d }
+      let(:balance) { 1_000 }
 
-      it 'order has expected order book' do
-        order = described_class.order_class.find(flow.order_id)
+      it { described_class.order_class.find(flow.order_id).order_book.should eq BitexBot::Settings.maker_settings.order_book }
 
-        order.order_book.should eq BitexBot::Settings.maker_settings.order_book
+      context 'with default fx_rate(1)' do
+        before(:each) do
+          BitexBot::Settings.stub(selling: build(:selling_settings, quantity_to_sell_per_order: quantity_to_sell.to_d, profit: 0, fx_rate: 1))
       end
 
-      it 'sells 2 btc' do
-        quantity_to_sell = 2.to_d
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0, fx_rate: 1))
+        context 'sells 2 btc' do
+          let(:quantity_to_sell) { 2 }
 
-        flow.order_id.should eq order_id
-        flow.value_to_use.should eq quantity_to_sell
-        flow.price.should >= flow.suggested_closing_price
-      end
+          it do
+            flow.order_id.should eq order_id
+            flow.value_to_use.should eq quantity_to_sell
+            flow.price.should >= flow.suggested_closing_price
+          end
 
-      context 'sells 4 btc' do
-        before(:each) { BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 0, fx_rate: 1)) }
+          it 'cancels the associated bitex ask' do
+            flow.finalise!.should be_truthy
+            flow.should be_settling
 
-        let(:quantity_to_sell) { 4.to_d }
+            flow.finalise!.should be_truthy
+            flow.should be_finalised
+          end
 
-        it 'with default fx_rate (1)' do
-          flow.order_id.should eq order_id
-          flow.value_to_use.should eq quantity_to_sell
-          flow.price.should >= flow.suggested_closing_price
+
+          context 'with preloaded store' do
+            let(:store) { create(:store, selling_profit: 0.5.to_d) }
+
+            it 'prioritizes profit from it' do
+              flow.order_id.should eq order_id
+              flow.value_to_use.should eq quantity_to_sell
+              flow.price.should >= flow.suggested_closing_price * BitexBot::Settings.buying.fx_rate
+            end
+          end
         end
 
-        it 'with other fx_rate' do
-          other_fx_rate = 10.to_d
-          BitexBot::Settings.stub(selling_fx_rate: other_fx_rate)
+        context 'sells 4 btc' do
+          let(:quantity_to_sell) { 4 }
 
-          flow.order_id.should eq order_id
-          flow.value_to_use.should eq quantity_to_sell
-          flow.price.should >= flow.suggested_closing_price
+          it 'raises the price to charge on bitex to take a profit' do
+            flow.order_id.should eq order_id
+            flow.value_to_use.should eq quantity_to_sell
+            flow.price.should >= flow.suggested_closing_price * BitexBot::Settings.buying.fx_rate
+          end
+
+          it 'fails when there is a problem placing the ask on bitex' do
+            Bitex::Ask.stub(:create!) { raise StandardError, 'Cannot Create' }
+
+            expect do
+              flow.should be_nil
+              described_class.count.should be_zero
+            end.to raise_exception(BitexBot::CannotCreateFlow, 'Cannot Create')
+          end
+
+          context 'with other fx_rate' do
+            let(:fx_rate) { 10 }
+
+            it do
+              flow.order_id.should eq order_id
+              flow.value_to_use.should eq quantity_to_sell
+              flow.price.should >= flow.suggested_closing_price * BitexBot::Settings.selling.fx_rate
+            end
+          end
         end
-      end
-
-      it 'raises the price to charge on bitex to take a profit' do
-        quantity_to_sell = 4.to_d
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: quantity_to_sell, profit: 50.to_d, fx_rate: 1))
-
-        flow.order_id.should eq order_id
-        flow.value_to_use.should eq quantity_to_sell
-        flow.price.should >= flow.suggested_closing_price
-      end
-
-      it 'fails when there is a problem placing the ask on bitex' do
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 4, profit: 0, fx_rate: 1))
-        Bitex::Ask.stub(:create!) { raise StandardError, 'Cannot Create' }
-
-        expect do
-          flow.should be_nil
-          described_class.count.should be_zero
-        end.to raise_exception(BitexBot::CannotCreateFlow, 'Cannot Create')
-      end
-
-      context 'with preloaded store' do
-        let(:store) { create(:store, selling_profit: 0.5.to_d) }
-
-        it 'Prioritizes profit from it' do
-          usd_price = '20.25_112_781_954_887'.to_d
-          BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 2, profit: 0, fx_rate: 1))
-
-          flow.price.round(14).should eq usd_price
-        end
-      end
-
-      it 'cancels the associated bitex ask' do
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 2, profit: 0, fx_rate: 1))
-
-        flow.finalise!.should be_truthy
-        flow.should be_settling
-
-        flow.finalise!.should be_truthy
-        flow.should be_finalised
       end
     end
 
     context 'with USD balance 1' do
-      let(:usd_balance) { 1.to_d }
+      let(:balance) { 1 }
+      let(:quantity_to_sell) { 4 }
 
       it 'fails when there are not enough USD to re-buy in the other exchange' do
-        BitexBot::Settings.stub(selling: double(quantity_to_sell_per_order: 4, profit: 0, fx_rate: 1))
+        BitexBot::Settings.stub(selling: build(:selling_settings, quantity_to_sell_per_order: quantity_to_sell.to_d))
 
         expect do
           flow.should be_nil
@@ -133,18 +130,19 @@ describe BitexBot::SellOpeningFlow do
       expect do
         trades.size.should eq 1
 
-        trades.sample.tap do |t|
-          t.opening_flow.should eq flow
-          t.transaction_id.should eq trade_id
-          t.price.should eq 300
-          t.amount.should eq 600
-          t.quantity.should eq 2
+        trades.sample.tap do |sample|
+          sample.opening_flow.should eq flow
+          sample.transaction_id.should eq trade_id
+          sample.price.should eq 300
+          sample.amount.should eq 600
+          sample.quantity.should eq 2
         end
       end.to change { BitexBot::OpenSell.count }.by(1)
     end
 
     it 'does not register the same buy twice' do
       flow.order_id.should eq order_id
+
       described_class.sync_open_positions
 
       BitexBot::OpenSell.count.should eq 1
@@ -167,6 +165,7 @@ describe BitexBot::SellOpeningFlow do
 
     it 'does not register buys from unknown bids' do
       expect { described_class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenSell.count }
+      BitexBot::OpenSell.count.should be_zero
     end
   end
 end
