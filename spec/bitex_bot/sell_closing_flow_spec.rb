@@ -1,16 +1,8 @@
 require 'spec_helper'
 
 describe BitexBot::SellClosingFlow do
-  let(:taker_settings) do
-    BitexBot::SettingsClass.new(
-      bitstamp: {
-        api_key: 'YOUR_API_KEY', secret: 'YOUR_API_SECRET', client_id: 'YOUR_BITSTAMP_USERNAME'
-      }
-    )
-  end
-
   before(:each) do
-    BitexBot::Settings.stub(taker: taker_settings)
+    BitexBot::Settings.stub(taker: build(:bitstamp_taker))
     BitexBot::Robot.setup
   end
 
@@ -61,9 +53,7 @@ describe BitexBot::SellClosingFlow do
   end
 
   describe 'when there are errors placing the closing order' do
-    before(:each) do
-      BitexBot::Robot.taker.stub(send_order: nil)
-    end
+    before(:each) { BitexBot::Robot.taker.stub(send_order: nil) }
 
     let(:flow) { described_class.last }
 
@@ -84,10 +74,7 @@ describe BitexBot::SellClosingFlow do
     end
 
     it 'retries until it finds the lost order' do
-      BitexBot::Robot.taker.stub(send_order: nil)
-      BitexBot::Robot.taker.stub(:orders) do
-        [BitexBot::Api::Order.new(1, :buy, 290, 2, 1.minute.ago.to_i)]
-      end
+      BitexBot::Robot.taker.stub(orders: [BitexBot::Api::Order.new(1, :buy, 290, 2, 1.minute.ago.to_i)])
 
       create(:open_sell)
       described_class.close_open_positions
@@ -138,11 +125,11 @@ describe BitexBot::SellClosingFlow do
     end
 
     context 'with other fx rate and closed open positions' do
-      let(:fx_rate) { 10.to_d }
+      let(:fx_rate) { 10 }
       let(:positions_balance_amount) { flow.open_positions.sum(:amount) - flow.positions_balance_amount }
 
       before(:each) do
-        BitexBot::Settings.stub(fx_rate: fx_rate)
+        BitexBot::Settings.stub(fx_rate: fx_rate.to_d)
         described_class.close_open_positions
 
         stub_bitstamp_orders_into_transactions
@@ -159,9 +146,7 @@ describe BitexBot::SellClosingFlow do
     it 'retries closing at a higher price every minute' do
       described_class.close_open_positions
 
-      expect do
-        flow.sync_closed_positions
-      end.not_to change{ BitexBot::CloseSell.count }
+      expect { flow.sync_closed_positions }.not_to change{ BitexBot::CloseSell.count }
       flow.should_not be_done
 
       # Immediately calling sync again does not try to cancel the ask.
@@ -173,21 +158,17 @@ describe BitexBot::SellClosingFlow do
       Timecop.travel(61.seconds.from_now)
 
       Bitstamp.orders.all.size.should eq 1
-      expect do
-        flow.sync_closed_positions
-      end.not_to change{ BitexBot::CloseSell.count }
+      expect { flow.sync_closed_positions }.not_to change{ BitexBot::CloseSell.count }
 
       Bitstamp.orders.all.size.should be_zero
       flow.should_not be_done
 
-      # Next time we try to sync_closed_positions the flow detects the previous close_buy was cancelled correctly so it syncs
+      # Next time we try to sync_closed_positions the flow detects the previous close_sell was cancelled correctly so it syncs
       # it's total amounts and tries to place a new one.
-      expect do
-        flow.sync_closed_positions
-      end.to change{ BitexBot::CloseSell.count }.by(1)
+      expect { flow.sync_closed_positions }.to change{ BitexBot::CloseSell.count }.by(1)
 
       flow.close_positions.first.tap do |close|
-        close.amount.should eq '291.9525'.to_d
+        close.amount.should eq 291.952_5.to_d
         close.quantity.should eq 1.005
       end
 
@@ -215,9 +196,7 @@ describe BitexBot::SellClosingFlow do
       stub_bitstamp_orders_into_transactions(ratio: 0.999)
       Bitstamp.orders.all.first.cancel!
 
-      expect do
-        flow.sync_closed_positions
-      end.not_to change{ BitexBot::CloseSell.count }
+      expect { flow.sync_closed_positions }.not_to change{ BitexBot::CloseSell.count }
 
       flow.should be_done
       flow.crypto_profit.should eq -0.0_224_895
@@ -225,8 +204,8 @@ describe BitexBot::SellClosingFlow do
     end
 
     it 'can lose BTC if price had to be raised dramatically' do
-      # This flow is forced to spend the original USD amount paying more than expected, thus regaining less BTC than what was
-      # sold on bitex.
+      # This flow is forced to spend the original USD amount paying more than expected, thus regaining
+      # less BTC than what was sold on bitex.
       described_class.close_open_positions
 
       60.times do
@@ -241,7 +220,6 @@ describe BitexBot::SellClosingFlow do
       flow.crypto_profit.should eq -0.1_709
       flow.fiat_profit.should eq 20.08_575
 
-      close = flow.close_positions.last
       (close.amount / close.quantity).should eq 317.5
     end
   end
