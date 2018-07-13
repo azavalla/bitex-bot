@@ -38,8 +38,12 @@ module BitexStubs
     end
   end
 
+  # Transactions's query arrive ordered by the newest one.
   def stub_bitex_transactions(*extra_transactions)
-    Bitex::Trade.stub(all: extra_transactions + [build(:bitex_buy), build(:bitex_sell)])
+    Bitex::Trade.stub(:all) do
+      (extra_transactions + [build(:bitex_buy), build(:bitex_sell)])
+        .sort { |t1, t2| t2.created_at <=> t1.created_at }
+    end
   end
 
   # {

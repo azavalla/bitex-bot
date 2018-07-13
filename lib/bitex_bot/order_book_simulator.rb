@@ -53,8 +53,7 @@ module BitexBot
       threshold = transactions.first.timestamp - volatility
       transactions
         .select { |t| t.timestamp > threshold }
-        .map(&:amount)
-        .sum
+        .sum(&:amount)
     end
 
     def self.best_price?(volume, target, seen)

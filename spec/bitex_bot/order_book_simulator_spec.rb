@@ -61,6 +61,65 @@ describe BitexBot::OrderBookSimulator do
     end
   end
 
+  describe '#estimate_quantity_to_skip' do
+    before(:each) do
+      BitexBot::Settings.stub(taker: build(:bitex_taker))
+      BitexBot::Robot.setup
+      stub_bitex_transactions(oldest_transaction)
+    end
+
+    # The stubed transactions have timestamp close to the current.
+    let(:oldest_transaction) { build(:bitex_sell, id: oldest_id, created_at: oldest_timestamp) }
+
+    let(:oldest_id) { Faker::Number.number }
+
+    # When antiquity is smallest, more current is the oldest timestamp.
+    let(:oldest_timestamp) { Time.at(antiquity.seconds.ago) }
+    let(:antiquity) { 2_000_000_000 }
+
+    context 'transactions amount sum' do
+      let(:transactions) { BitexBot::Robot.taker.transactions }
+
+      context 'when there isn´t volatility, no date is greater than the date of the most recent' do
+        # A lower volatility reduces the scope, limiting it closer to the most current record.
+        let(:volatility) { 0 }
+
+        # Then none will be within reach.
+        let(:estimate_quantity) { 0 }
+
+        it { described_class.estimate_quantity_to_skip(volatility, transactions).should eq estimate_quantity }
+      end
+
+      context 'when volatility leaves out the oldest transaction' do
+        # A greater volatility than the antiquity, will leave the oldest record within range.
+        let(:volatility) { antiquity - 1 }
+
+        # Sum of the amounts without the oldest.
+        let(:estimate_quantity) { transactions.reject { |t| t.id == oldest_id }.sum(&:amount) }
+
+        it { described_class.estimate_quantity_to_skip(volatility, transactions).should eq estimate_quantity }
+      end
+
+      context 'leave inside the oldest transaction' do
+        # A greater volatility than the antiquity, will leave the oldest record within range.
+        let(:volatility) { antiquity + 1 }
+
+        # Sum of the amounts without the oldest.
+        let(:estimate_quantity) { transactions.sum(&:amount) }
+
+        it { described_class.estimate_quantity_to_skip(volatility, transactions).should eq estimate_quantity }
+      end
+    end
+  end
+
+  describe '#best_price' do
+    let(:price) { Faker::Number.decimal }
+    let(:target) { Faker::Number.decimal }
+    let(:currency) { Faker::Currency.code }
+
+    it { described_class.best_price(currency, target, price).should eq price }
+  end
+
   describe '#best_price?, when the volume' do
     let(:volume) { 20 }
     let(:target) { 30 }
