@@ -75,7 +75,7 @@ describe BitexBot::OrderBookSimulator do
 
     # When antiquity is smallest, more current is the oldest timestamp.
     let(:oldest_timestamp) { Time.at(antiquity.seconds.ago) }
-    let(:antiquity) { 2_000_000_000 }
+    let(:antiquity) { 1_500_000_000 }
 
     context 'transactions amount sum' do
       let(:transactions) { BitexBot::Robot.taker.transactions }
