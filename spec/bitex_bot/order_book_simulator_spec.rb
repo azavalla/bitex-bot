@@ -5,7 +5,7 @@ describe BitexBot::OrderBookSimulator do
     let(:bids) { bitstamp_api_wrapper_order_book.bids }
 
     def simulate(volatility, amount)
-      BitexBot::OrderBookSimulator.run(volatility, bitstamp_api_wrapper_transactions_stub, bids, amount, nil)
+      described_class.run(volatility, bitstamp_api_wrapper_transactions_stub, bids, amount, nil)
     end
 
     it 'gets the safest price' do
@@ -37,7 +37,7 @@ describe BitexBot::OrderBookSimulator do
     let(:asks) { bitstamp_api_wrapper_order_book.asks }
 
     def simulate(volatility, quantity)
-      BitexBot::OrderBookSimulator.run(volatility, bitstamp_api_wrapper_transactions_stub, asks, nil, quantity)
+      described_class.run(volatility, bitstamp_api_wrapper_transactions_stub, asks, nil, quantity)
     end
 
     it 'gets the safest price' do
@@ -58,6 +58,32 @@ describe BitexBot::OrderBookSimulator do
 
     it 'big orders with high volatility dig deep' do
       simulate(6, 6).should eq 30
+    end
+  end
+
+  describe '#best_price?, when the volume' do
+    let(:volume) { 20 }
+    let(:target) { 30 }
+
+    context 'is greater than the subtraction between the objective and seen' do
+      let(:seen) { 20 }
+
+      it { volume.should > target - seen }
+      it { described_class.best_price?(volume, target, seen).should be_truthy }
+
+      context 'or equals' do
+        let(:seen) { 10 }
+
+        it { volume.should eq target - seen }
+        it { described_class.best_price?(volume, target, seen).should be_truthy }
+      end
+    end
+
+    context 'is lower than the subtraction between the objective and seen' do
+      let(:seen) { 5 }
+
+      it { volume.should < target - seen }
+      it { described_class.best_price?(volume, target, seen).should be_falsey }
     end
   end
 end
