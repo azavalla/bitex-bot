@@ -1,6 +1,8 @@
 require 'spec_helper'
 
 describe BitexBot::Settings do
+  it { described_class.should be_a(BitexBot::SettingsClass) }
+
   describe '#to_hash' do
     it 'returns a symbolized hash' do
       described_class.to_hash.should eq(
@@ -58,12 +60,12 @@ describe BitexBot::Settings do
       {
         bitex: { api_key: 'your_bitex_api_key_which_should_be_kept_safe', order_book: :btc_usd, sandbox: false }
       }.each do |market, market_settings|
-        before(:each) { described_class.stub(taker: BitexBot::SettingsClass.new(taker_hash)) }
+        before(:each) { described_class.stub(maker: BitexBot::SettingsClass.new(maker_hash)) }
 
-        let(:taker_hash) { { market => market_settings } }
+        let(:maker_hash) { { market => market_settings } }
 
         context "for #{market}" do
-          it { described_class.taker.to_hash.should eq(taker_hash) }
+          it { described_class.maker.to_hash.should eq(maker_hash) }
         end
       end
     end
@@ -72,7 +74,8 @@ describe BitexBot::Settings do
       {
         bitstamp: { api_key: 'YOUR_API_KEY', secret: 'YOUR_API_SECRET', client_id: 'YOUR_BITSTAMP_USERNAME' },
         itbit: { client_key: 'client-key', secret: 'secret', user_id: 'user-id',  default_wallet_id: 'wallet-000', sandbox: false },
-        kraken: { api_key: 'your_api_key', api_secret: 'your_api_secret' }
+        kraken: { api_key: 'your_api_key', api_secret: 'your_api_secret' },
+        bitex: { api_key: 'taker_api_key', ssl_version: nil, debug: false, sandbox: false }
       }.each do |market, market_settings|
         before(:each) { described_class.stub(taker: BitexBot::SettingsClass.new(taker_hash)) }
 
