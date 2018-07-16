@@ -71,7 +71,7 @@ describe BitexBot::OrderBookSimulator do
     # The stubed transactions have timestamp close to the current.
     let(:oldest_transaction) { build(:bitex_sell, id: oldest_id, created_at: oldest_timestamp) }
 
-    let(:oldest_id) { Faker::Number.number }
+    let(:oldest_id) { Faker::Number.number.to_i }
 
     # When antiquity is smallest, more current is the oldest timestamp.
     let(:oldest_timestamp) { Time.at(antiquity.seconds.ago) }
@@ -92,7 +92,7 @@ describe BitexBot::OrderBookSimulator do
 
       context 'when volatility leaves out the oldest transaction' do
         # A greater volatility than the antiquity, will leave the oldest record within range.
-        let(:volatility) { antiquity - 1 }
+        let(:volatility) { antiquity - 10 }
 
         # Sum of the amounts without the oldest.
         let(:estimate_quantity) { transactions.reject { |t| t.id == oldest_id }.sum(&:amount) }
@@ -102,7 +102,7 @@ describe BitexBot::OrderBookSimulator do
 
       context 'leave inside the oldest transaction' do
         # A greater volatility than the antiquity, will leave the oldest record within range.
-        let(:volatility) { antiquity + 1 }
+        let(:volatility) { antiquity + 10 }
 
         # Sum of the amounts without the oldest.
         let(:estimate_quantity) { transactions.sum(&:amount) }
