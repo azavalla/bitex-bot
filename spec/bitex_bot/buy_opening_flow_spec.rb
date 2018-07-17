@@ -26,6 +26,12 @@ describe BitexBot::BuyOpeningFlow do
       )
     end
 
+    def consistent_flow
+      flow.order_id.should eq order_id
+      flow.value_to_use.should eq amount_to_spend
+      flow.price.should <= flow.suggested_closing_price * BitexBot::Settings.buying.fx_rate
+    end
+
     context 'with BTC balance 100' do
       let(:balance) { 100 }
 
@@ -41,11 +47,7 @@ describe BitexBot::BuyOpeningFlow do
         context 'spends 50 usd' do
           let(:amount_to_spend) { 50 }
 
-          it do
-            flow.order_id.should eq order_id
-            flow.value_to_use.should eq amount_to_spend
-            flow.price.should <= flow.suggested_closing_price * BitexBot::Settings.buying.fx_rate
-          end
+          it { consistent_flow }
 
           it 'cancels the associated bitex bid' do
             flow.finalise!.should be_truthy
@@ -59,9 +61,7 @@ describe BitexBot::BuyOpeningFlow do
             let(:store) { create(:store, buying_profit: 0.5.to_d) }
 
             it 'prioritizes profit from it' do
-              flow.order_id.should eq order_id
-              flow.value_to_use.should eq amount_to_spend
-              flow.price.should <= flow.suggested_closing_price * BitexBot::Settings.buying.fx_rate
+              consistent_flow
             end
           end
         end
@@ -70,9 +70,7 @@ describe BitexBot::BuyOpeningFlow do
           let(:amount_to_spend) { 100 }
 
           it 'lowers the price to pay on bitex to take a profit' do
-            flow.order_id.should eq order_id
-            flow.value_to_use.should eq amount_to_spend
-            flow.price.should <= flow.suggested_closing_price * BitexBot::Settings.buying.fx_rate
+            consistent_flow
           end
 
           it 'fails when there is a problem placing the bid on bitex' do
@@ -87,11 +85,7 @@ describe BitexBot::BuyOpeningFlow do
           context 'with other fx_rate' do
             let(:fx_rate) { 10 }
 
-            it do
-              flow.order_id.should eq order_id
-              flow.value_to_use.should eq amount_to_spend
-              flow.price.should <= flow.suggested_closing_price * BitexBot::Settings.buying.fx_rate
-            end
+            it { consistent_flow }
           end
         end
       end
@@ -108,6 +102,7 @@ describe BitexBot::BuyOpeningFlow do
           flow.should be_nil
           described_class.count.should be_zero
         end.to raise_exception(BitexBot::CannotCreateFlow)
+        # Needed more than 1.0 but you only have 1.0
       end
     end
   end
