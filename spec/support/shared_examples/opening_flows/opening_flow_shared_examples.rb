@@ -7,7 +7,7 @@ shared_examples_for BitexBot::OpeningFlow do
 
   let(:factory) { described_class.to_s.demodulize.underscore.to_sym }
 
-  context '#active scope' do
+  describe '#active scope' do
     before(:each) { create_list(factory, count_flows, status: status) }
     let(:count_flows) { Faker::Number.between(1, 10) }
 
@@ -28,7 +28,7 @@ shared_examples_for BitexBot::OpeningFlow do
     end
   end
 
-  context '#old active scope' do
+  describe '#old active scope' do
     before(:each) do
       BitexBot::Settings.stub(time_to_live: time_to_live)
       create_list(factory, count_flows, status: :executing, created_at: timestamp.seconds.ago.to_time)
@@ -50,7 +50,7 @@ shared_examples_for BitexBot::OpeningFlow do
     end
   end
 
-  context 'on work flow' do
+  describe 'on work flow' do
     before(:each) { BitexBot::Robot.setup }
 
     let(:trade_name) { described_class.to_s.demodulize.underscore.split('_').first }
@@ -59,7 +59,7 @@ shared_examples_for BitexBot::OpeningFlow do
 
     let(:order_id) { 12_345 }
 
-    describe 'when fetching open positions' do
+    context 'when fetching open positions' do
       before(:each) { stub_bitex_transactions }
 
       let(:flow) { create(factory) }
