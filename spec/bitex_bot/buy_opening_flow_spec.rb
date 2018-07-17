@@ -1,11 +1,7 @@
 require 'spec_helper'
 
 describe BitexBot::BuyOpeningFlow do
-  it { should validate_presence_of :status }
-  it { should validate_presence_of :price }
-  it { should validate_presence_of :value_to_use }
-  it { should validate_presence_of :order_id }
-  it { should validate_inclusion_of(:status).in_array(described_class.statuses) }
+  it_behaves_like BitexBot::OpeningFlow
 
   before(:each) { BitexBot::Robot.setup }
 
@@ -113,59 +109,6 @@ describe BitexBot::BuyOpeningFlow do
           described_class.count.should be_zero
         end.to raise_exception(BitexBot::CannotCreateFlow)
       end
-    end
-  end
-
-  describe 'when fetching open positions' do
-    before(:each) { stub_bitex_transactions }
-
-    let(:flow) { create(:buy_opening_flow) }
-    let(:trades) { described_class.sync_open_positions }
-    let(:trade_id) { 12_345_678 }
-    let(:other_trade_id) { 23_456 }
-
-    it 'only gets buys' do
-      flow.order_id.should eq order_id
-
-      expect do
-        trades.size.should eq 1
-
-        trades.sample.tap do |sample|
-          sample.opening_flow.should eq flow
-          sample.transaction_id.should eq trade_id
-          sample.price.should eq 300
-          sample.amount.should eq 600
-          sample.quantity.should eq 2
-        end
-      end.to change { BitexBot::OpenBuy.count }.by(1)
-    end
-
-    it 'does not register the same buy twice' do
-      flow.order_id.should eq order_id
-
-      described_class.sync_open_positions
-
-      BitexBot::OpenBuy.count.should eq 1
-
-      Timecop.travel(1.second.from_now)
-      stub_bitex_transactions(build(:bitex_buy, id: other_trade_id))
-
-      expect do
-        trades.size.should eq 1
-        trades.sample.transaction_id.should eq other_trade_id
-      end.to change { BitexBot::OpenBuy.count }.by(1)
-    end
-
-    it 'does not register buys from another order book' do
-      Bitex::Trade.stub(all: [build(:bitex_buy, id: other_trade_id, order_book: :btc_ars)])
-
-      expect { described_class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenBuy.count }
-      BitexBot::OpenBuy.count.should be_zero
-    end
-
-    it 'does not register buys from unknown bids' do
-      expect { described_class.sync_open_positions.should be_empty }.not_to change { BitexBot::OpenBuy.count }
-      BitexBot::OpenBuy.count.should be_zero
     end
   end
 end
