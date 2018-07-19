@@ -160,11 +160,9 @@ module BitexBot
       [BuyClosingFlow, SellClosingFlow].each { |kind| kind.active.each(&:sync_closed_positions) }
     end
 
-    # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+    # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
     def start_opening_flows_if_needed
-      return log(:debug, 'Not placing new orders because of hold') if store.reload.hold?
-      return log(:debug, 'Not placing new orders, closing flows.') if active_closing_flows?
-      return log(:debug, 'Not placing new orders, shutting down.') if turn_off?
+      return if cant_placing_new_orders?
 
       recent_buying, recent_selling = recent_operations
       return log(:debug, 'Not placing new orders, recent ones exist.') if [recent_buying, recent_selling].all?(&:present?)
@@ -183,7 +181,14 @@ module BitexBot
       BuyOpeningFlow.create_for_market(*[taker_balance.crypto.available, order_book.bids] + args) unless recent_buying
       SellOpeningFlow.create_for_market(*[taker_balance.fiat.available, order_book.asks] + args) unless recent_selling
     end
-    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
+
+    def cant_placing_new_orders?
+      msj = 'Not placing new orders, because %<reason>s'
+      return log(:debug, format(msj, reason: 'of hold.')) if store.reload.hold?
+      return log(:debug, format(msj, reason: 'closing flows.')) if active_closing_flows?
+      return log(:debug, format(msj, reason: 'shutting down.')) if turn_off?
+    end
 
     def recent_operations
       threshold = (Settings.time_to_live / 2).seconds.ago
