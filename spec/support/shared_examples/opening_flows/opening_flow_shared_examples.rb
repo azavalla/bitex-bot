@@ -51,6 +51,9 @@ shared_examples_for BitexBot::OpeningFlow do
   end
 
   let(:trade_name) {described_class.to_s.demodulize.underscore.split('_').first.to_sym }
+  let(:order_kind) { { sell: :ask, buy: :bid } }
+  let(:order_factory) { "bitex_#{order_kind[trade_name]}".to_sym }
+  let(:trade_factory) { "bitex_#{trade_name}".to_sym }
 
   describe '#create for market' do
     before(:each) do
@@ -58,8 +61,6 @@ shared_examples_for BitexBot::OpeningFlow do
       BitexBot::Robot.maker.stub(create_order!: order)
     end
 
-    let(:order_kind) { { sell: :ask, buy: :bid } }
-    let(:order_factory) { "bitex_#{order_kind[trade_name]}".to_sym }
     let(:comparition_matcher) { { sell: :>=, buy: :<= }[trade_name] }
 
     let(:order) { build(order_factory) }
@@ -74,9 +75,18 @@ shared_examples_for BitexBot::OpeningFlow do
     let(:flow) { described_class.create_for_market(taker_balance, taker_orders, taker_transactions, maker_fee, taker_fee, store) }
 
     it 'successfull' do
+      flow.order_id.should eq order.id
       flow.should be_a(described_class)
       flow.price.should.send(comparition_matcher, flow.suggested_closing_price * BitexBot::Settings.selling.fx_rate)
     end
+  end
+
+  describe '#transaction order id' do
+    let(:trade) { build(trade_factory) }
+    let(:transaction) { BitexBot::Api::Transaction.new(trade.id, trade.price, trade.amount, trade.created_at.to_i, trade) }
+  let(:attr_order_id) { "#{order_kind[trade_name]}_id".to_sym }
+
+    it { described_class.transaction_order_id(transaction).should eq trade.send(attr_order_id) }
   end
 
   describe 'on work flow' do
