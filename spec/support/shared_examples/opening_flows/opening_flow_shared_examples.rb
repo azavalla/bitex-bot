@@ -89,6 +89,12 @@ shared_examples_for BitexBot::OpeningFlow do
     it { described_class.transaction_order_id(transaction).should eq trade.send(attr_order_id) }
   end
 
+  describe '#open position class' do
+    let(:open_class) { "BitexBot::Open#{trade_name.capitalize}".constantize }
+
+    it { described_class.open_position_class.should eq open_class }
+  end
+
   describe 'on work flow' do
     let(:bitex_trade) { :"bitex_#{trade_name}" }
     let(:trade_class) { "BitexBot::Open#{trade_name.capitalize}".constantize }
