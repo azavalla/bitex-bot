@@ -6,7 +6,7 @@ describe BitexBot::SellOpeningFlow do
   before(:each) { BitexBot::Robot.setup }
 
   let(:order_id) { 12_345 }
-  let(:order_book) { bitstamp_api_wrapper_order_book.asks }
+  let(:order_book) { bitex_api_wrapper_order_book.asks }
   let(:store) { create(:store) }
 
   describe 'when creating a selling flow' do
@@ -19,14 +19,14 @@ describe BitexBot::SellOpeningFlow do
       described_class.create_for_market(
         balance.to_d,
         order_book,
-        bitstamp_api_wrapper_transactions_stub,
+        bitex_api_wrapper_transactions_stub,
         0.5.to_d,
         0.25.to_d,
         store
       )
     end
 
-    def consistent_flow
+    def successfull_flow
       flow.order_id.should eq order_id
       flow.value_to_use.should eq quantity_to_sell
       flow.price.should >= flow.suggested_closing_price * BitexBot::Settings.selling.fx_rate
@@ -47,7 +47,7 @@ describe BitexBot::SellOpeningFlow do
         context 'sells 2 btc' do
           let(:quantity_to_sell) { 2 }
 
-          it { consistent_flow }
+          it { successfull_flow }
 
           it 'cancels the associated bitex ask' do
             flow.finalise!.should be_truthy
@@ -61,7 +61,7 @@ describe BitexBot::SellOpeningFlow do
             let(:store) { create(:store, selling_profit: 0.5.to_d) }
 
             it 'prioritizes profit from it' do
-              consistent_flow
+              successfull_flow
             end
           end
         end
@@ -70,7 +70,7 @@ describe BitexBot::SellOpeningFlow do
           let(:quantity_to_sell) { 4 }
 
           it 'raises the price to charge on bitex to take a profit' do
-            consistent_flow
+            successfull_flow
           end
 
           it 'fails when there is a problem placing the ask on bitex' do
@@ -85,7 +85,7 @@ describe BitexBot::SellOpeningFlow do
           context 'with other fx_rate' do
             let(:fx_rate) { 10 }
 
-            it { consistent_flow }
+            it { successfull_flow }
           end
         end
       end

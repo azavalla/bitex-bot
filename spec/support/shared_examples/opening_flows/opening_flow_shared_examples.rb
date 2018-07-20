@@ -28,7 +28,7 @@ shared_examples_for BitexBot::OpeningFlow do
     end
   end
 
-  describe '#old active scope' do
+  describe '#old active' do
     before(:each) do
       BitexBot::Settings.stub(time_to_live: time_to_live)
       create_list(factory, count_flows, status: :executing, created_at: timestamp.seconds.ago.to_time)
@@ -50,10 +50,36 @@ shared_examples_for BitexBot::OpeningFlow do
     end
   end
 
-  describe 'on work flow' do
-    before(:each) { BitexBot::Robot.setup }
+  let(:trade_name) {described_class.to_s.demodulize.underscore.split('_').first.to_sym }
 
-    let(:trade_name) { described_class.to_s.demodulize.underscore.split('_').first }
+  describe '#create for market' do
+    before(:each) do
+      BitexBot::Robot.setup
+      BitexBot::Robot.maker.stub(create_order!: order)
+    end
+
+    let(:order_kind) { { sell: :ask, buy: :bid } }
+    let(:order_factory) { "bitex_#{order_kind[trade_name]}".to_sym }
+    let(:comparition_matcher) { { sell: :>=, buy: :<= }[trade_name] }
+
+    let(:order) { build(order_factory) }
+
+    let(:taker_orders) { bitstamp_api_wrapper_order_book.send(order_kind[trade_name].to_s.pluralize) }
+    let(:taker_transactions) { bitstamp_api_wrapper_transactions_stub }
+    let(:taker_balance) { Faker::Number.normal(100, 10).truncate(2).to_d }
+    let(:taker_fee) { Faker::Number.normal(1, 0.5).truncate(2).to_d }
+    let(:maker_fee) { Faker::Number.normal(1, 0.5).truncate(2).to_d }
+    let(:store) { create(:store) }
+
+    let(:flow) { described_class.create_for_market(taker_balance, taker_orders, taker_transactions, maker_fee, taker_fee, store) }
+
+    it 'successfull' do
+      flow.should be_a(described_class)
+      flow.price.should.send(comparition_matcher, flow.suggested_closing_price * BitexBot::Settings.selling.fx_rate)
+    end
+  end
+
+  describe 'on work flow' do
     let(:bitex_trade) { :"bitex_#{trade_name}" }
     let(:trade_class) { "BitexBot::Open#{trade_name.capitalize}".constantize }
 

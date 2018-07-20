@@ -23,6 +23,10 @@ module BitexBot
         end
       end
 
+      def create_order!(order_class, specie_pair, amount, price, wait)
+        with_session { order_class.create!(specie_pair, amount, price, wait) }
+      end
+
       def profile
         with_session { ::Bitex::Profile.get }
       end
