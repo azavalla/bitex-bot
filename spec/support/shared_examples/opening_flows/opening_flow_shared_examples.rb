@@ -16,7 +16,7 @@ shared_examples_for BitexBot::OpeningFlow do
         let(:status) { st }
 
         it "with status '#{st}'" do
-          described_class.active.count.should eq count_flows 
+          described_class.active.count.should eq count_flows
         end
       end
     end
@@ -50,52 +50,8 @@ shared_examples_for BitexBot::OpeningFlow do
     end
   end
 
-  let(:trade_name) {described_class.to_s.demodulize.underscore.split('_').first.to_sym }
-  let(:order_kind) { { sell: :ask, buy: :bid } }
-  let(:order_factory) { "bitex_#{order_kind[trade_name]}".to_sym }
-  let(:trade_factory) { "bitex_#{trade_name}".to_sym }
-
-  describe '#create for market' do
-    before(:each) do
-      BitexBot::Robot.setup
-      BitexBot::Robot.maker.stub(create_order!: order)
-    end
-
-    let(:comparition_matcher) { { sell: :>=, buy: :<= }[trade_name] }
-
-    let(:order) { build(order_factory) }
-
-    let(:taker_orders) { bitstamp_api_wrapper_order_book.send(order_kind[trade_name].to_s.pluralize) }
-    let(:taker_transactions) { bitstamp_api_wrapper_transactions_stub }
-    let(:taker_balance) { Faker::Number.normal(100, 10).truncate(2).to_d }
-    let(:taker_fee) { Faker::Number.normal(1, 0.5).truncate(2).to_d }
-    let(:maker_fee) { Faker::Number.normal(1, 0.5).truncate(2).to_d }
-    let(:store) { create(:store) }
-
-    let(:flow) { described_class.create_for_market(taker_balance, taker_orders, taker_transactions, maker_fee, taker_fee, store) }
-
-    it 'successfull' do
-      flow.order_id.should eq order.id
-      flow.should be_a(described_class)
-      flow.price.should.send(comparition_matcher, flow.suggested_closing_price * BitexBot::Settings.selling.fx_rate)
-    end
-  end
-
-  describe '#transaction order id' do
-    let(:trade) { build(trade_factory) }
-    let(:transaction) { BitexBot::Api::Transaction.new(trade.id, trade.price, trade.amount, trade.created_at.to_i, trade) }
-  let(:attr_order_id) { "#{order_kind[trade_name]}_id".to_sym }
-
-    it { described_class.transaction_order_id(transaction).should eq trade.send(attr_order_id) }
-  end
-
-  describe '#open position class' do
-    let(:open_class) { "BitexBot::Open#{trade_name.capitalize}".constantize }
-
-    it { described_class.open_position_class.should eq open_class }
-  end
-
   describe 'on work flow' do
+    let(:trade_name) { described_class.to_s.demodulize.underscore.split('_').first.to_sym }
     let(:bitex_trade) { :"bitex_#{trade_name}" }
     let(:trade_class) { "BitexBot::Open#{trade_name.capitalize}".constantize }
 

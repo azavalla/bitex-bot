@@ -18,8 +18,8 @@ module BitexBot
     # The amount a BuyOpeningFlow will try to buy and the price it will try to buy at are derived from these parameters:
     #
     # @param btc_balance [BigDecimal] amount of btc available in the other exchange that can be sold to balance this purchase.
-    # @param order_book [[price, quantity]] a list of lists representing a bid order book in the other exchange.
-    # @param transactions [Hash] a list of hashes representing all transactions in the other exchange:
+    # @param taker_orders [[price, quantity]] a list of lists representing a bid order book in the other exchange.
+    # @param taker_transactions [Hash] a list of hashes representing all transactions in the other exchange:
     #   Each hash contains 'date', 'tid', 'price' and 'amount', where 'amount' is the BTC transacted.
     # @param maker_fee [BigDecimal] the transaction fee to pay on maker exchange.
     # @param taker_fee [BigDecimal] the transaction fee to pay on taker exchange.
@@ -28,7 +28,7 @@ module BitexBot
     # @return [BuyOpeningFlow] The newly created flow.
     # @raise [CannotCreateFlow] If there's any problem creating this flow, for example when you run out of USD on bitex or out
     #   of BTC on the other exchange.
-    def self.create_for_market(btc_balance, order_book, transactions, maker_fee, taker_fee, store)
+    def self.create_for_market(btc_balance, taker_orders, taker_transactions, maker_fee, taker_fee, store)
       super
     end
 
@@ -65,8 +65,8 @@ module BitexBot
       (value_to_use_needed / fx_rate) / safest_price
     end
 
-    def self.safest_price(transactions, order_book, amount_to_use)
-      OrderBookSimulator.run(Settings.time_to_live, transactions, order_book, amount_to_use / fx_rate, nil)
+    def self.safest_price(taker_transactions, taker_orders, amount_to_use)
+      OrderBookSimulator.run(Settings.time_to_live, taker_transactions, taker_orders, amount_to_use / fx_rate, nil)
     end
 
     def self.value_to_use

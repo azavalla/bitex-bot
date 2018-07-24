@@ -1,13 +1,85 @@
 require 'spec_helper'
 
 describe BitexBot::BuyOpeningFlow do
-  it_behaves_like BitexBot::OpeningFlow
-
   before(:each) { BitexBot::Robot.setup }
 
-  let(:order_id) { 12_345 }
-  let(:order_book) { bitstamp_api_wrapper_order_book.bids }
-  let(:store) { create(:store) }
+  it_behaves_like BitexBot::OpeningFlow
+
+  describe '#create for market' do
+    let(:taker_orders) { bitstamp_api_wrapper_order_book.bids }
+    let(:taker_transactions) { bitstamp_api_wrapper_transactions_stub }
+    let(:maker_fee) { Faker::Number.normal(1, 0.5).truncate(2).to_d }
+    let(:taker_fee) { Faker::Number.normal(1, 0.5).truncate(2).to_d }
+    let(:store) { create(:store) }
+
+    let(:flow) { described_class.create_for_market(taker_balance, taker_orders, taker_transactions, maker_fee, taker_fee, store) }
+
+    context 'the external value remote calculated gives 2 approximately' do
+      context 'when taker balance is greater or equal than remote value, that later it will be used to calculate bitex price' do
+        before(:each) { described_class.order_class.stub(create!: order) }
+
+        let(:order) { build(:bitex_bid) }
+        let(:taker_balance) { Faker::Number.normal(100, 10).truncate(2).to_d }
+
+        context 'success' do
+          let(:fx_rate) { BitexBot::Settings.buying.fx_rate }
+
+          it { flow.order_id.should eq order.id }
+          it { flow.should be_a(described_class) }
+          it { flow.price.should <= flow.suggested_closing_price * fx_rate }
+        end
+
+        context 'fails, when try place order on maker, but you do not have sufficient funds' do
+          let(:value_to_use) { BitexBot::Settings.buying.amount_to_spend_per_order }
+          let(:order) { build(:bitex_bid, reason: :not_enough_funds) }
+          let(:error) { "You need to have #{value_to_use} on bitex to place this Bitex::Bid." }
+
+          it { expect { flow }.to raise_exception(BitexBot::CannotCreateFlow, error) }
+        end
+
+        context 'fails, when creating  any validation' do
+          before(:each) { described_class.stub(:create!) { raise error } }
+
+          let(:error) { StandardError }
+
+          it { expect { flow }.to raise_exception(BitexBot::CannotCreateFlow, error.to_s) }
+        end
+      end
+
+      context 'fails, when taker balance is lower than remote value' do
+        before(:each) { described_class.store = store }
+
+        let(:needed) { described_class.calc_remote_value(maker_fee, taker_fee, taker_orders, taker_transactions)[0] }
+        let(:taker_balance) { needed - 1 }
+        let(:error) { "Needed #{needed} but you only have #{taker_balance}" }
+
+        it { expect { flow }.to raise_exception(BitexBot::CannotCreateFlow, error) }
+      end
+    end
+  end
+
+=begin
+  describe '#transaction order id' do
+    let(:trade) { build(:bitex_buy) }
+    let(:transaction) { BitexBot::Api::Transaction.new(trade.id, trade.price, trade.amount, trade.created_at.to_i, trade) }
+
+    it { described_class.transaction_order_id(transaction).should eq trade.bid_id }
+  end
+
+  describe '#open position class' do
+    it { described_class.open_position_class.should eq BitexBot::OpenBuy }
+  end
+
+  describe '#transaction class' do
+    it { described_class.transaction_class.should eq Bitex::Buy }
+  end
+
+
+#  before(:each) { BitexBot::Robot.setup }
+
+#  let(:order_id) { 12_345 }
+#  let(:order_book) { bitstamp_api_wrapper_order_book.bids }
+#  let(:store) { create(:store) }
 
   describe 'when creating a buying flow' do
     before(:each) do
@@ -106,4 +178,5 @@ describe BitexBot::BuyOpeningFlow do
       end
     end
   end
+=end
 end

@@ -29,10 +29,10 @@ module BitexBot
     #   #safest_price
     #   #value_to_use
     # rubocop:disable Metrics/AbcSize
-    def self.create_for_market(remote_balance, order_book, transactions, maker_fee, taker_fee, store)
+    def self.create_for_market(remote_balance, taker_orders, taker_transactions, maker_fee, taker_fee, store)
       self.store = store
 
-      remote_value, safest_price = calc_remote_value(maker_fee, taker_fee, order_book, transactions)
+      remote_value, safest_price = calc_remote_value(maker_fee, taker_fee, taker_orders, taker_transactions)
       raise CannotCreateFlow, "Needed #{remote_value} but you only have #{remote_balance}" unless
         enough_remote_funds?(remote_balance, remote_value)
 
@@ -60,9 +60,9 @@ module BitexBot
     # rubocop:enable Metrics/AbcSize
 
     # create_for_market helpers
-    def self.calc_remote_value(maker_fee, taker_fee, order_book, transactions)
+    def self.calc_remote_value(maker_fee, taker_fee, taker_orders, taker_transactions)
       value_to_use_needed = (value_to_use + maker_plus(maker_fee)) / (1 - taker_fee / 100)
-      safest_price = safest_price(transactions, order_book, value_to_use_needed)
+      safest_price = safest_price(taker_transactions, taker_orders, value_to_use_needed)
       remote_value = remote_value_to_use(value_to_use_needed, safest_price)
 
       [remote_value, safest_price]
