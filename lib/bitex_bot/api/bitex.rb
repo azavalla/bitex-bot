@@ -45,6 +45,14 @@ module BitexBot
         with_session { balance_summary_parser(profile) }
       end
 
+      def cancel(order)
+        with_session { order.cancel! }
+      end
+
+      def find(order_class, order_id)
+        with_session { order_class.find(order_id) }
+      end
+
       def find_lost(type, price, _quantity)
         with_session { orders.find { |o| o.type == type && o.price == price && o.timestamp >= 5.minutes.ago.to_i } }
       end

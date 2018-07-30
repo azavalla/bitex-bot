@@ -43,4 +43,37 @@ describe BitexBot::Api::Bitex do
     sample.type.should be_a(Integer)
     sample.timestamp.should be_a(Integer)
   end
+
+  describe 'with Asks and Bids' do
+    let(:order_name) { %i[bid ask].sample }
+    let(:order_class) { "Bitex::#{order_name.capitalize}".constantize }
+
+    describe '#find' do
+      before(:each) { order_class.stub(find: order) }
+
+      let(:order) { build(:"bitex_#{order_name}", id: order_id) }
+      let(:order_id) { Faker::Number.between(100, 1_000) }
+
+      subject { wrapper.find(order_class, order_id) }
+
+      it do
+        order_class.should receive(:find).with(order_id)
+        subject.should eq order
+      end
+    end
+
+    describe '#cancel' do
+      before(:each) { order.stub(:cancel!) { order.tap { order.status = :cancelling } } }
+
+      let(:order) { build(:"bitex_#{order_name}") }
+
+      subject { wrapper.cancel(order) }
+
+      it do
+        order.should receive(:cancel!)
+        subject.should eq order
+        order.status.should eq :cancelling
+      end
+    end
+  end
 end

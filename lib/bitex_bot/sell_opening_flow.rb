@@ -32,7 +32,6 @@ module BitexBot
       super
     end
 
-    # sync_open_positions helpers
     def self.transaction_order_id(transaction)
       transaction.raw.ask_id
     end
@@ -40,15 +39,11 @@ module BitexBot
     def self.open_position_class
       OpenSell
     end
-    # end: sync_open_positions helpers
 
-    # sought_transaction helpers
     def self.transaction_class
       Bitex::Sell
     end
-    # end: sought_transaction helpers
 
-    # create_for_market helpers
     def self.maker_price(fiat_to_spend_re_buying)
       fiat_to_spend_re_buying * fx_rate / value_to_use * (1 + profit / 100)
     end
@@ -56,15 +51,20 @@ module BitexBot
     def self.order_class
       Bitex::Ask
     end
+    def_delegator self, :order_class
 
     def self.profit
       store.selling_profit || Settings.selling.profit
     end
 
+    # don't apply fx_rate as convertion factor, because this value will be used on maker market
+    # and there we will keep the local currency of that market, it could be another besides USD.
     def self.remote_value_to_use(value_to_use_needed, safest_price)
       value_to_use_needed * safest_price
     end
 
+    # don't apply fx_rate as convertion factor, because this value will be used on maker market
+    # and there we will keep the local currency of that market, it could be another besides USD.
     def self.safest_price(taker_transactions, taker_orders, crypto_to_use)
       OrderBookSimulator.run(Settings.time_to_live, taker_transactions, taker_orders, nil, crypto_to_use)
     end
@@ -72,7 +72,6 @@ module BitexBot
     def self.value_to_use
       store.selling_quantity_to_sell_per_order || Settings.selling.quantity_to_sell_per_order
     end
-    # end: create_for_market helpers
 
     def self.fx_rate
       Settings.selling.fx_rate

@@ -1,64 +1,53 @@
 require 'spec_helper'
 
 describe BitexBot::BuyOpeningFlow do
-  before(:each) { BitexBot::Robot.setup }
-
   it_behaves_like BitexBot::OpeningFlow
 
   describe '#create for market' do
+    before(:each) { BitexBot::Robot.setup }
+
     let(:taker_orders) { bitstamp_api_wrapper_order_book.bids }
     let(:taker_transactions) { bitstamp_api_wrapper_transactions_stub }
     let(:maker_fee) { Faker::Number.normal(1, 0.5).truncate(2).to_d }
     let(:taker_fee) { Faker::Number.normal(1, 0.5).truncate(2).to_d }
     let(:store) { create(:store) }
 
-    let(:flow) { described_class.create_for_market(taker_balance, taker_orders, taker_transactions, maker_fee, taker_fee, store) }
+    subject { described_class.create_for_market(taker_balance, taker_orders, taker_transactions, maker_fee, taker_fee, store) }
 
     context 'the external value remote calculated gives 2 approximately' do
-      context 'when taker balance is greater or equal than remote value, that later it will be used to calculate bitex price' do
+      context 'when taker balance is lower or equal than remote value, that later it will be used to calculate bitex price' do
         before(:each) { described_class.order_class.stub(create!: order) }
 
         let(:order) { build(:bitex_bid) }
-        let(:taker_balance) { Faker::Number.normal(100, 10).truncate(2).to_d }
+        let(:taker_balance) { Faker::Number.normal(1_000, 10).truncate(2).to_d }
 
-        context 'success' do
-          let(:fx_rate) { BitexBot::Settings.buying.fx_rate }
+        it_behaves_like 'fails, when creating any validation'
+        it_behaves_like 'fails, when try place order on maker, but you do not have sufficient funds'
 
-          it { flow.order_id.should eq order.id }
-          it { flow.should be_a(described_class) }
-          it { flow.price.should <= flow.suggested_closing_price * fx_rate }
-        end
-
-        context 'fails, when try place order on maker, but you do not have sufficient funds' do
-          let(:value_to_use) { BitexBot::Settings.buying.amount_to_spend_per_order }
-          let(:order) { build(:bitex_bid, reason: :not_enough_funds) }
-          let(:error) { "You need to have #{value_to_use} on bitex to place this Bitex::Bid." }
-
-          it { expect { flow }.to raise_exception(BitexBot::CannotCreateFlow, error) }
-        end
-
-        context 'fails, when creating  any validation' do
-          before(:each) { described_class.stub(:create!) { raise error } }
-
-          let(:error) { StandardError }
-
-          it { expect { flow }.to raise_exception(BitexBot::CannotCreateFlow, error.to_s) }
+        it 'success' do
+          subject.order_id.should eq order.id
+          subject.should be_a(described_class)
+          subject.price.should <= subject.suggested_closing_price * described_class.fx_rate
         end
       end
 
-      context 'fails, when taker balance is lower than remote value' do
+      context 'fails, when there are not enough BTC to sell in the other exchange' do
         before(:each) { described_class.store = store }
 
         let(:needed) { described_class.calc_remote_value(maker_fee, taker_fee, taker_orders, taker_transactions)[0] }
         let(:taker_balance) { needed - 1 }
         let(:error) { "Needed #{needed} but you only have #{taker_balance}" }
 
-        it { expect { flow }.to raise_exception(BitexBot::CannotCreateFlow, error) }
+        it 'when taker balance is lower than remote value' do
+          expect do
+            subject.should be_nil
+            described_class.count.should be_zero
+          end.to raise_exception(BitexBot::CannotCreateFlow, error)
+        end
       end
     end
   end
 
-=begin
   describe '#transaction order id' do
     let(:trade) { build(:bitex_buy) }
     let(:transaction) { BitexBot::Api::Transaction.new(trade.id, trade.price, trade.amount, trade.created_at.to_i, trade) }
@@ -74,109 +63,123 @@ describe BitexBot::BuyOpeningFlow do
     it { described_class.transaction_class.should eq Bitex::Buy }
   end
 
-
-#  before(:each) { BitexBot::Robot.setup }
-
-#  let(:order_id) { 12_345 }
-#  let(:order_book) { bitstamp_api_wrapper_order_book.bids }
-#  let(:store) { create(:store) }
-
-  describe 'when creating a buying flow' do
+  describe '#maker price' do
     before(:each) do
-      BitexBot::Settings.stub(time_to_live: 3.to_d)
-      stub_bitex_active_orders
+      described_class.store = create(:store)
+
+      # it's indifferent here, but not on sell opening flow.
+      described_class.stub(value_to_use: value_to_use)
+      described_class.stub(fx_rate: fx_rate)
+      described_class.stub(profit: profit)
     end
 
-    let(:flow) do
-      described_class.create_for_market(
-        balance.to_d,
-        order_book,
-        bitstamp_api_wrapper_transactions_stub,
-        0.5.to_d,
-        0.25.to_d,
-        store
-      )
+    let(:value_to_use) { Faker::Number.normal(50, 10).truncate(2) }
+    let(:fx_rate) { Faker::Number.normal(50, 10).truncate(2) }
+    let(:profit) { Faker::Number.normal(50, 10).truncate(2) }
+
+    let(:crypto_to_resell) { Faker::Number.normal(50, 10).truncate(2) }
+
+    let(:source_amount) { crypto_to_resell }
+    let(:percentile_profit) { 1 - profit / 100 }
+
+    it { described_class.maker_price(crypto_to_resell).should eq value_to_use / crypto_to_resell * percentile_profit }
+  end
+
+  describe '#order class' do
+    it { described_class.order_class.should eq Bitex::Bid }
+  end
+
+  describe '#profit' do
+    before(:each) { described_class.store = store }
+
+    let(:profit) { Faker::Number.normal(40, 10).truncate(2).to_d }
+
+    context 'without store' do
+      let(:store) { nil }
+      let(:error) { "undefined method `buying_profit' for nil:NilClass" }
+
+      it { expect { described_class.profit }.to raise_exception(NoMethodError, error) }
     end
 
-    def consistent_flow
-      flow.order_id.should eq order_id
-      flow.value_to_use.should eq amount_to_spend
-      flow.price.should <= flow.suggested_closing_price * BitexBot::Settings.buying.fx_rate
-    end
+    context 'with created store' do
+      let(:store) { create(:store, buying_profit: profit) }
 
-    context 'with BTC balance 100' do
-      let(:balance) { 100 }
-
-      it { described_class.order_class.find(flow.order_id).order_book.should eq BitexBot::Settings.maker_settings.order_book }
-
-      context 'with default fx_rate(1)' do
-        before(:each) do
-          BitexBot::Settings.stub(buying: build(:buying_settings, amount_to_spend_per_order: amount_to_spend.to_d, fx_rate: fx_rate.to_d))
-        end
-
-        let(:fx_rate) { 1 }
-
-        context 'spends 50 usd' do
-          let(:amount_to_spend) { 50 }
-
-          it { consistent_flow }
-
-          it 'cancels the associated bitex bid' do
-            flow.finalise!.should be_truthy
-            flow.should be_settling
-
-            flow.finalise!.should be_truthy
-            flow.should be_finalised
-          end
-
-          context 'with preloaded store' do
-            let(:store) { create(:store, buying_profit: 0.5.to_d) }
-
-            it 'prioritizes profit from it' do
-              consistent_flow
-            end
-          end
-        end
-
-        context 'spends 100 usd' do
-          let(:amount_to_spend) { 100 }
-
-          it 'lowers the price to pay on bitex to take a profit' do
-            consistent_flow
-          end
-
-          it 'fails when there is a problem placing the bid on bitex' do
-            Bitex::Bid.stub(:create!) { raise StandardError, 'Cannot Create' }
-
-            expect do
-              flow.should be_nil
-              described_class.count.should be_zero
-            end.to raise_exception(BitexBot::CannotCreateFlow, 'Cannot Create')
-          end
-
-          context 'with other fx_rate' do
-            let(:fx_rate) { 10 }
-
-            it { consistent_flow }
-          end
-        end
+      it 'and loaded buying_profit, prioritize Store value' do
+        described_class.profit.should eq profit
       end
-    end
 
-    context 'with BTC balance 1' do
-      let(:balance) { 1 }
-      let(:amount_to_spend) { 100 }
+      context 'with nil buying_profit, prioritize Settings value' do
+        before(:each) do
+          store.update(buying_profit: nil)
+          BitexBot::SettingsClass.any_instance.stub(buying: build(:buying_settings, profit: profit))
+        end
 
-      it 'fails when there are not enough bitcoin to sell in the other exchange' do
-        BitexBot::Settings.stub(buying: build(:buying_settings, amount_to_spend_per_order: amount_to_spend.to_d))
-
-        expect do
-          flow.should be_nil
-          described_class.count.should be_zero
-        end.to raise_exception(BitexBot::CannotCreateFlow)
-        # Needed more than 1.0 but you only have 1.0
+        it { described_class.profit.should eq profit }
       end
     end
   end
-=end
+
+  describe '#remote value to use' do
+    before(:each) { described_class.stub(fx_rate: fx_rate) }
+
+    let(:value) { Faker::Number.normal(40, 10).truncate(2).to_d }
+    let(:price) { Faker::Number.normal(40, 10).truncate(2).to_d }
+    let(:fx_rate) { Faker::Number.normal(10, 8).truncate(2).to_d }
+
+    it { described_class.remote_value_to_use(value, price).should eq (value / fx_rate) / price }
+  end
+
+  describe '#safest price' do
+    before(:each) { described_class.stub(fx_rate: fx_rate) }
+
+    after(:each) { described_class.safest_price(taker_transactions, taker_orders, fiat_to_use) }
+
+    let(:taker_orders) { bitstamp_api_wrapper_order_book.asks }
+    let(:taker_transactions) { bitstamp_api_wrapper_transactions_stub }
+    let(:fiat_to_use) { Faker::Number.normal(15, 1).truncate(2).to_d }
+    let(:fx_rate) { Faker::Number.normal(10, 8).truncate(2).to_d }
+
+    it do
+      BitexBot::OrderBookSimulator
+        .should receive(:run)
+        .with(BitexBot::Settings.time_to_live, taker_transactions, taker_orders, fiat_to_use / fx_rate, nil)
+    end
+  end
+
+  describe '#value to use' do
+    before(:each) { described_class.store = store }
+
+    let(:profit) { Faker::Number.normal(40, 10).truncate(2).to_d }
+
+    context 'without store' do
+      let(:store) { nil }
+      let(:error) { "undefined method `buying_amount_to_spend_per_order' for nil:NilClass" }
+
+      it { expect { described_class.value_to_use }.to raise_exception(NoMethodError, error) }
+    end
+
+    context 'with created store' do
+      context 'with loaded buying_amount_to_spend_per_order, prioritize Store value' do
+        let(:store) { create(:store, buying_amount_to_spend_per_order: profit) }
+
+        it { described_class.value_to_use.should eq profit }
+      end
+
+      context 'with nil buying_amount_to_spend_per_order, prioritize Settings value' do
+        before(:each) { BitexBot::SettingsClass.any_instance.stub(buying: build(:buying_settings, amount_to_spend_per_order: profit)) }
+
+        let(:store) { create(:store, buying_amount_to_spend_per_order: nil) }
+
+        it { described_class.value_to_use.should eq profit }
+      end
+    end
+  end
+
+  describe '#fx rate' do
+    before(:each) { BitexBot::SettingsClass.any_instance.stub(buying: build(:buying_settings, fx_rate: fx_rate)) }
+
+    let(:fx_rate) { Faker::Number.normal(40, 10).truncate(2).to_d }
+
+    it { described_class.fx_rate.should eq fx_rate }
+  end
 end

@@ -3,6 +3,8 @@ module BitexBot
   # The OpeningFlow stage places an order on bitex, detecting and storing all transactions spawn from that order as
   # Open positions.
   class OpeningFlow < ActiveRecord::Base
+    extend Forwardable
+
     self.abstract_class = true
 
     # The updated config store as passed from the robot
@@ -59,7 +61,6 @@ module BitexBot
     end
     # rubocop:enable Metrics/AbcSize
 
-    # create_for_market helpers
     def self.calc_remote_value(maker_fee, taker_fee, taker_orders, taker_transactions)
       value_to_use_needed = (value_to_use + maker_plus(maker_fee)) / (1 - taker_fee / 100)
       safest_price = safest_price(taker_transactions, taker_orders, value_to_use_needed)
@@ -85,7 +86,6 @@ module BitexBot
     def self.maker_plus(fee)
       value_to_use * fee / 100
     end
-    # end: create_for_market helpers
 
     # Buys on bitex represent open positions, we mirror them locally so that we can plan on how to close them.
     # This use hooks methods, these must be defined in the subclass:
@@ -120,8 +120,6 @@ module BitexBot
       )
     end
 
-    # This use hooks methods, these must be defined in the subclass:
-    #   #transaction_class
     def self.sought_transaction?(threshold, transaction)
       fit_operation_kind?(transaction) &&
         !expired_transaction?(transaction, threshold) &&
@@ -144,11 +142,45 @@ module BitexBot
     def self.expected_order_book?(transaction)
       transaction.raw.order_book == Settings.maker_settings.order_book
     end
-    # end: sync_open_positions helpers
+
+    def self.transaction_order_id(_transaction)
+      raise SubclassResponsibility
+    end
+
+    def self.open_position_class
+      raise SubclassResponsibility
+    end
+
+    def self.transaction_class
+      raise SubclassResponsibility
+    end
+
+    def self.maker_price(_amount_to_reverse_trade)
+      raise SubclassResponsibility
+    end
+
+    def self.order_class
+      raise SubclassResponsibility
+    end
+
+    def self.profit
+      raise SubclassResponsibility
+    end
+
+    def self.remote_value_to_use(_value_to_use_needed, _safest_price)
+      raise SubclassResponsibility
+    end
+
+    def self.safest_price(_taker_transactions, _taker_orders, _amount_to_use)
+      raise SubclassResponsibility
+    end
+
+    def self.value_to_use
+      raise SubclassResponsibility
+    end
 
     validates :status, presence: true, inclusion: { in: statuses }
-    validates :order_id, presence: true
-    validates_presence_of :price, :value_to_use
+    validates_presence_of :order_id, :price, :value_to_use
 
     # Statuses:
     #   executing: The Bitex order has been placed, its id stored as order_id.
@@ -160,29 +192,28 @@ module BitexBot
     end
 
     def finalise!
-      order = self.class.order_class.find(order_id)
-      canceled_or_completed?(order) ? do_finalize : do_cancel(order)
+      order = Robot.maker.find(order_class, order_id)
+      cancelled_or_completed?(order) ? do_finalise : do_cancel(order)
     end
 
     private
 
-    # finalise! helpers
-    def canceled_or_completed?(order)
+    def cancelled_or_completed?(order)
       %i[cancelled completed].any? { |status| order.status == status }
     end
 
-    def do_finalize
-      Robot.log(:info, "Opening: #{self.class.order_class.name} ##{order_id} finalised.")
+    def do_finalise
+      Robot.log(:info, "Opening: #{order_class.name} ##{order_id} finalised.")
       finalised!
     end
 
     def do_cancel(order)
-      Robot.log(:info, "Opening: #{self.class.order_class.name} ##{order_id} canceled.")
-      order.cancel!
+      Robot.log(:info, "Opening: #{order_class.name} ##{order_id} canceled.")
+      Robot.maker.cancel(order)
       settling! unless settling?
     end
-    # end: finalise! helpers
   end
 
   class CannotCreateFlow < StandardError; end
+  class SubclassResponsibility < StandardError; end
 end

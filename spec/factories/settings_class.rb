@@ -1,4 +1,14 @@
 FactoryBot.define do
+  factory :bitex_maker, class: BitexBot::SettingsClass do
+    bitex { build(:bitex_maker_settings) }
+  end
+
+  factory :bitex_maker_settings, class: BitexBot::SettingsClass do
+    sequence(:api_key)  { |n| "bitex_maker_api_key_#{n}" }
+    order_book          :btc_usd
+    sandbox             false
+  end
+
   factory :bitex_taker, class: BitexBot::SettingsClass do
     bitex { build(:bitex_taker_settings) }
   end

@@ -97,7 +97,12 @@ describe BitexBot::OrderBookSimulator do
         # Sum of the amounts without the oldest.
         let(:estimate_quantity) { transactions.reject { |t| t.id == oldest_id }.sum(&:amount) }
 
-        it { described_class.estimate_quantity_to_skip(volatility, transactions).should eq estimate_quantity }
+        it do
+          if described_class.estimate_quantity_to_skip(volatility, transactions) != estimate_quantity
+            debugger
+          end
+          described_class.estimate_quantity_to_skip(volatility, transactions).should eq estimate_quantity
+        end
       end
 
       context 'leave inside the oldest transaction' do
