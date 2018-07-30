@@ -136,8 +136,10 @@ describe BitexBot::BuyOpeningFlow do
 
     let(:taker_orders) { bitstamp_api_wrapper_order_book.asks }
     let(:taker_transactions) { bitstamp_api_wrapper_transactions_stub }
-    let(:fiat_to_use) { Faker::Number.normal(15, 1).truncate(2).to_d }
-    let(:fx_rate) { Faker::Number.normal(10, 8).truncate(2).to_d }
+    #let(:fiat_to_use) { Faker::Number.normal(15, 1).truncate(2).to_d }
+    #let(:fx_rate) { Faker::Number.normal(10, 8).truncate(2).to_d }
+    let(:fiat_to_use) { 2 }
+    let(:fx_rate) { 5 }
 
     it do
       BitexBot::OrderBookSimulator
