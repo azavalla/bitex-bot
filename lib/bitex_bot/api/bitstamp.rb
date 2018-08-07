@@ -60,6 +60,7 @@ module BitexBot
       end
 
       def send_order(type, price, quantity)
+        # TODO: its may be wrapper on Api::Order struct
         ::Bitstamp.orders.send(type, amount: quantity.round(4), price: price.round(2))
       end
 

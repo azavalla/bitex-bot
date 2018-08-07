@@ -49,11 +49,11 @@ module BitexBot
     end
     # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
-    def self.estimate_quantity_to_skip(volatility, transactions)
+    def self.estimate_quantity_to_skip(volatility, transactions, params = nil)
+      # esto lo voy a solucionar cuando arregle los stubs y los generalice con mejor logica en los specs
+      #debugger unless params.nil?
       threshold = transactions.first.timestamp - volatility
-      transactions
-        .select { |t| t.timestamp > threshold }
-        .sum(&:amount)
+      transactions.select { |t| t.timestamp > threshold }.sum(&:amount)
     end
 
     def self.best_price?(volume, target, seen)

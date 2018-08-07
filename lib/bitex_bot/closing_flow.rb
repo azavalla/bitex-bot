@@ -10,8 +10,8 @@ module BitexBot
       open_positions = open_position_class.open
       return if open_positions.empty?
 
-      quantity = open_positions.map(&:quantity).sum
-      amount = open_positions.map(&:amount).sum
+      quantity = open_positions.sum(:quantity)
+      amount = open_positions.sum(:amount)
       price = suggested_amount(open_positions) / quantity
 
       # Don't even bother trying to close a position that's too small.
@@ -20,25 +20,30 @@ module BitexBot
       create_closing_flow!(price, quantity, amount, open_positions)
     end
 
-    # close_open_positions helpers
     def self.suggested_amount(positions)
       positions.map { |p| p.quantity * p.opening_flow.suggested_closing_price }.sum
     end
 
     def self.create_closing_flow!(price, quantity, amount, open_positions)
-      create!(desired_price: price, quantity: quantity, amount: amount, open_positions: open_positions)
-        .create_initial_order_and_close_position!
-    end
-    # end: close_open_positions helpers
-
-    def create_initial_order_and_close_position!
-      create_order_and_close_position(quantity, desired_price)
+      create!(
+        desired_price: price,
+        quantity: quantity,
+        amount: amount,
+        fx_rate: fx_rate,
+        open_positions: open_positions
+      ).tap do |flow|
+        flow.send(:create_order_and_close_position, flow.quantity, flow.desired_price)
+      end
     end
 
     # TODO: should receive a order_ids and user_transaccions array, then each Wrapper should know how to search for them.
     def sync_closed_positions
       # Maybe we couldn't create the bitstamp order when this flow was created, so we try again when syncing.
       latest_close.nil? ? create_initial_order_and_close_position! : create_or_cancel!
+    end
+
+    def create_initial_order_and_close_position!
+      create_order_and_close_position(quantity, desired_price)
     end
 
     def estimate_fiat_profit
@@ -109,8 +114,9 @@ module BitexBot
     # end: create_or_cancel! helpers
 
     # next_price_and_quantity helpers
+    # price_variation_quotient 0.03
     def price_variation(closes_count)
-      closes_count**2 * 0.03
+      (closes_count**2 * 0.03).to_d
     end
     # end: next_price_and_quantity helpers
 

@@ -13,7 +13,9 @@ module BitexBot
     # @!group Statuses
     # All possible flow statuses
     # @return [Array<String>]
-    cattr_accessor(:statuses) { %w[executing settling finalised] }
+    def self.statuses
+      %w[executing settling finalised]
+    end
 
     def self.active
       where.not(status: :finalised)

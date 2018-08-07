@@ -10,21 +10,20 @@ module BitexBot
       OpenBuy
     end
 
-    def fx_rate
+    def self.fx_rate
       Settings.buying_fx_rate
     end
 
     private
 
-    # create_or_cancel! hookers
-    # The coins we actually bought minus the coins we were supposed to re-buy
-    def estimate_crypto_profit
-      quantity - close_positions.sum(:quantity)
-    end
-
     # The amount received when selling initially, minus the amount spent re-buying the sold coins.
     def estimate_fiat_profit
       positions_balance_amount - open_positions.sum(:amount)
+    end
+
+    # The coins we actually bought minus the coins we were supposed to re-buy
+    def estimate_crypto_profit
+      quantity - close_positions.sum(:quantity)
     end
 
     def next_price_and_quantity
@@ -34,12 +33,9 @@ module BitexBot
 
       [next_price, next_quantity]
     end
-    # end: create_or_cancel! hookers
 
-    # create_order_and_close_position hookers
     def order_method
       :sell
     end
-    # end: create_order_and_close_position hookers
   end
 end

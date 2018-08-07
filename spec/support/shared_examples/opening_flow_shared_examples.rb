@@ -1,8 +1,8 @@
 shared_examples_for BitexBot::OpeningFlow do
-  it { should validate_presence_of :status }
-  it { should validate_presence_of :price }
-  it { should validate_presence_of :value_to_use }
-  it { should validate_presence_of :order_id }
+  it { should validate_presence_of(:status) }
+  it { should validate_presence_of(:price) }
+  it { should validate_presence_of(:value_to_use) }
+  it { should validate_presence_of(:order_id) }
   it { should(validate_inclusion_of(:status).in_array(described_class.statuses)) }
 
   let(:flow_factory) { described_class.to_s.demodulize.underscore.to_sym }
@@ -16,14 +16,14 @@ shared_examples_for BitexBot::OpeningFlow do
 
     let(:count_flows) { Faker::Number.between(1, 10) }
 
-    subject { described_class.active }
+    subject { described_class.active.count }
 
     context 'not finalised flows' do
       (described_class.statuses - %w[finalised]).each do |st|
         let(:status) { st }
 
         it "with status '#{st}'" do
-          subject.count.should eq count_flows
+          should eq count_flows
         end
       end
     end
@@ -31,11 +31,13 @@ shared_examples_for BitexBot::OpeningFlow do
     context 'finalised flows' do
       let(:status) { :finalised }
 
-      it { subject.count.should be_zero }
+      it { should be_zero }
     end
   end
 
   describe '#old active' do
+    subject { described_class.old_active.count }
+
     before(:each) do
       BitexBot::Settings.stub(time_to_live: time_to_live)
       create_list(flow_factory, count_flows, status: :executing, created_at: timestamp.seconds.ago.to_time)
@@ -44,18 +46,16 @@ shared_examples_for BitexBot::OpeningFlow do
     let(:count_flows) { Faker::Number.between(1, 10) }
     let(:time_to_live) { Faker::Number.between(30, 59) }
 
-    subject { described_class.old_active }
-
     context 'active and old' do
       let(:timestamp) { (time_to_live + 20) }
 
-      it { subject.count.should eq count_flows }
+      it { should eq count_flows }
     end
 
     context 'active but not old' do
       let(:timestamp) { (time_to_live - 20) }
 
-      it { subject.count.should be_zero }
+      it { should be_zero }
     end
   end
 
@@ -279,7 +279,7 @@ shared_examples_for 'fails, when try place order on maker, but you do not have s
 
   it do
     expect do
-      subject.should be_nil
+      should be_nil
       described_class.count.should be_zero
     end.to raise_exception(BitexBot::CannotCreateFlow, error % { maker_balance: needed, order_type: order_class })
   end
@@ -292,7 +292,7 @@ shared_examples_for 'fails, when creating any validation' do
 
   it do
     expect do
-      subject.should be_nil
+      should be_nil
       described_class.count.should be_zero
     end.to raise_exception(BitexBot::CannotCreateFlow, error)
   end

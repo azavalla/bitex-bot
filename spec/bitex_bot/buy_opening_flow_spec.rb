@@ -4,6 +4,8 @@ describe BitexBot::BuyOpeningFlow do
   it_behaves_like BitexBot::OpeningFlow
 
   describe '#create for market' do
+    subject { described_class.create_for_market(taker_balance, taker_orders, taker_transactions, maker_fee, taker_fee, store) }
+
     before(:each) { BitexBot::Robot.setup }
 
     let(:taker_orders) { bitstamp_api_wrapper_order_book.bids }
@@ -11,8 +13,6 @@ describe BitexBot::BuyOpeningFlow do
     let(:maker_fee) { Faker::Number.normal(1, 0.5).truncate(2).to_d }
     let(:taker_fee) { Faker::Number.normal(1, 0.5).truncate(2).to_d }
     let(:store) { create(:store) }
-
-    subject { described_class.create_for_market(taker_balance, taker_orders, taker_transactions, maker_fee, taker_fee, store) }
 
     context 'the external value remote calculated gives 2 approximately' do
       context 'when taker balance is lower or equal than remote value, that later it will be used to calculate bitex price' do
@@ -25,8 +25,8 @@ describe BitexBot::BuyOpeningFlow do
         it_behaves_like 'fails, when try place order on maker, but you do not have sufficient funds'
 
         it 'success' do
-          subject.order_id.should eq order.id
           subject.should be_a(described_class)
+          subject.order_id.should eq order.id
           subject.price.should <= subject.suggested_closing_price * described_class.fx_rate
         end
       end
@@ -136,10 +136,8 @@ describe BitexBot::BuyOpeningFlow do
 
     let(:taker_orders) { bitstamp_api_wrapper_order_book.asks }
     let(:taker_transactions) { bitstamp_api_wrapper_transactions_stub }
-    #let(:fiat_to_use) { Faker::Number.normal(15, 1).truncate(2).to_d }
-    #let(:fx_rate) { Faker::Number.normal(10, 8).truncate(2).to_d }
-    let(:fiat_to_use) { 2 }
-    let(:fx_rate) { 5 }
+    let(:fiat_to_use) { Faker::Number.normal(15, 1).truncate(2).to_d }
+    let(:fx_rate) { Faker::Number.normal(10, 8).truncate(2).to_d }
 
     it do
       BitexBot::OrderBookSimulator

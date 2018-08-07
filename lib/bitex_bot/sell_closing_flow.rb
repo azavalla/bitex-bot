@@ -10,13 +10,12 @@ module BitexBot
       OpenSell
     end
 
-    def fx_rate
+    def self.fx_rate
       Settings.selling_fx_rate
     end
 
     private
 
-    # create_or_cancel! helpers
     # The amount received when selling initially, minus the amount spent re-buying the sold coins.
     def estimate_fiat_profit
       open_positions.sum(:amount) - positions_balance_amount
@@ -34,12 +33,9 @@ module BitexBot
 
       [next_price, next_quantity]
     end
-    # end: create_or_cancel! helpers
 
-    # create_order_and_close_position helpers
     def order_method
       :buy
     end
-    # end: create_order_and_close_position helpers
   end
 end

@@ -68,6 +68,9 @@ describe BitexBot::OrderBookSimulator do
       stub_bitex_transactions(oldest_transaction)
     end
 
+    # only for debug, after will be removed
+    let(:params) { { ot: oldest_transaction, oi: oldest_id, ot: oldest_timestamp, aa: antiquity, trs: transactions, vv: volatility, eq: estimate_quantity } }
+
     # The stubed transactions have timestamp close to the current.
     let(:oldest_transaction) { build(:bitex_sell, id: oldest_id, created_at: oldest_timestamp) }
 
@@ -75,7 +78,7 @@ describe BitexBot::OrderBookSimulator do
 
     # When antiquity is smallest, more current is the oldest timestamp.
     let(:oldest_timestamp) { Time.at(antiquity.seconds.ago) }
-    let(:antiquity) { 1_300_000_000 }
+    let(:antiquity) { 130_000_000 }
 
     context 'transactions amount sum' do
       let(:transactions) { BitexBot::Robot.taker.transactions }
@@ -87,7 +90,10 @@ describe BitexBot::OrderBookSimulator do
         # Then none will be within reach.
         let(:estimate_quantity) { 0 }
 
-        it { described_class.estimate_quantity_to_skip(volatility, transactions).should eq estimate_quantity }
+        it do
+         #described_class.estimate_quantity_to_skip(volatility, transactions, params) unless described_class.estimate_quantity_to_skip(volatility, transactions) == estimate_quantity
+          described_class.estimate_quantity_to_skip(volatility, transactions).should eq estimate_quantity
+        end
       end
 
       context 'when volatility leaves out the oldest transaction' do
@@ -98,9 +104,7 @@ describe BitexBot::OrderBookSimulator do
         let(:estimate_quantity) { transactions.reject { |t| t.id == oldest_id }.sum(&:amount) }
 
         it do
-          if described_class.estimate_quantity_to_skip(volatility, transactions) != estimate_quantity
-            debugger
-          end
+          #described_class.estimate_quantity_to_skip(volatility, transactions, params) unless described_class.estimate_quantity_to_skip(volatility, transactions) == estimate_quantity
           described_class.estimate_quantity_to_skip(volatility, transactions).should eq estimate_quantity
         end
       end
